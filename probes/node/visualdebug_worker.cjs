@@ -78,7 +78,8 @@ function flush() {
 // ------------------------------------------------------------------ scripts & source maps
 const scripts = new Map(); // scriptId -> { url, abs, rel, map, setup }
 const toAbs = (url) => (url.startsWith("file://") ? fileURLToPath(url) : url);
-const isProject = (abs) => abs.startsWith(ROOT) && !abs.includes("/node_modules/") && !abs.includes("/.visualdebug/");
+const isProject = (abs) =>
+  abs.startsWith(ROOT) && !abs.includes("/node_modules/") && (!abs.includes("/.visualdebug/") || abs.includes("/.visualdebug/examples/"));
 const relOf = (abs) => (abs.startsWith(ROOT) ? abs.slice(ROOT.length) : abs);
 const lineLevel = (rel) => LINE_FILES === null || LINE_FILES.has(rel);
 const resolveSource = (s, src) => toAbs(new URL(src, s.url.startsWith("file://") ? s.url : "file://" + s.url).href);
@@ -354,7 +355,7 @@ parentPort.on("message", (m) => {
 (async () => {
   try {
     await post("Debugger.enable");
-    await post("Debugger.setBlackboxPatterns", { patterns: ["/node_modules/", "^node:", "^internal/", "/\\.visualdebug/"] });
+    await post("Debugger.setBlackboxPatterns", { patterns: ["/node_modules/", "^node:", "^internal/", "/\\.visualdebug/(?!examples/)"] });
     // Untransformed files: by-URL breakpoints resolve exactly at compile time.
     const files = new Set([...(LINE_FILES || []), ...(START ? [START.file] : [])]);
     const calls = [];

@@ -212,7 +212,8 @@ module VisualdebugProbe
       return (@project_cache ||= {})[path] = false if path.start_with?("<", "(") # <internal:kernel>, (eval)
       a = abs(path)
       v = a.start_with?(@root) && a != SELF_PATH && !a.include?("/vendor/") && !a.include?("/node_modules/") &&
-          !a.include?("/.bundle/") && !a.start_with?("#{@root}tmp/") && !a.start_with?("#{@root}.visualdebug/")
+          !a.include?("/.bundle/") && !a.start_with?("#{@root}tmp/") &&
+          (!a.start_with?("#{@root}.visualdebug/") || a.start_with?("#{@root}.visualdebug/examples/"))
       (@project_cache ||= {})[path] = v
     end
 

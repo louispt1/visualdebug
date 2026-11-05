@@ -75,7 +75,8 @@ class Probe:
         if r is None:
             p = os.path.abspath(path) if path and not path.startswith("<") else ""
             r = bool(p) and p.startswith(self.root) and p not in _PROBE_FILES and not any(
-                s in p for s in ("/site-packages/", "/dist-packages/", "/.venv/", "/venv/", "/node_modules/", "/.tox/", "/.visualdebug/"))
+                s in p for s in ("/site-packages/", "/dist-packages/", "/.venv/", "/venv/", "/node_modules/", "/.tox/")) and (
+                "/.visualdebug/" not in p or "/.visualdebug/examples/" in p)
             self.project_cache[path] = r
         return r
 

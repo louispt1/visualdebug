@@ -1,6 +1,7 @@
 //! visualdebug: record how code executes, then scrub through it in a self-contained HTML viewer.
 //! The tool is deterministic and never calls an LLM; the Claude Code skill drives the AI parts.
 
+mod doctor;
 mod project;
 mod probes;
 mod run;
@@ -40,6 +41,24 @@ enum Cmd {
         #[arg(long)]
         no_open: bool,
     },
+    /// Validate annotations against a trace and merge them into it
+    Annotate {
+        /// Trace name or path
+        trace: String,
+        /// annotations.json (see schema/annotations.schema.json)
+        annotations: PathBuf,
+    },
+    /// Detect languages, runtimes, test runners and git; report problems
+    Doctor,
+    /// Install the Claude Code skill (default: --user, i.e. ~/.claude/skills/visualdebug)
+    InstallSkill {
+        /// ~/.claude/skills (all projects)
+        #[arg(long, conflicts_with = "project")]
+        user: bool,
+        /// ./.claude/skills (this project; commit it to share with your team)
+        #[arg(long)]
+        project: bool,
+    },
     /// Delete recorded runs, traces and bundles (keeps .visualdebug/examples)
     Clean,
 }
@@ -56,6 +75,9 @@ fn main() {
         Cmd::Run(args) => run::run(args),
         Cmd::Summarize { trace, format, max_lines } => cmd_summarize(trace.as_deref(), format, max_lines).map(|_| 0),
         Cmd::View { traces, out, no_open } => cmd_view(&traces, out, no_open).map(|_| 0),
+        Cmd::Annotate { trace, annotations } => cmd_annotate(&trace, &annotations),
+        Cmd::Doctor => doctor::doctor(),
+        Cmd::InstallSkill { user: _, project } => cmd_install_skill(project).map(|_| 0),
         Cmd::Clean => cmd_clean().map(|_| 0),
     };
     match result {
@@ -100,7 +122,7 @@ fn cmd_view(names: &[String], out: Option<PathBuf>, no_open: bool) -> Result<()>
     std::fs::write(&out, html).with_context(|| format!("writing {}", out.display()))?;
     let steps: usize = traces.iter().map(|t| t.steps.len()).sum();
     eprintln!("visualdebug: wrote {} ({} trace(s), {steps} steps)", out.display(), traces.len());
-    if !no_open {
+    if !no_open && std::env::var_os("VISUALDEBUG_NO_OPEN").is_none() {
         if let Err(e) = opener::open(&out) {
             eprintln!("visualdebug: couldn't open a browser ({e}); open the file above manually");
         }
@@ -125,5 +147,54 @@ fn cmd_clean() -> Result<()> {
         n += 1;
     }
     eprintln!("visualdebug: removed {n} item(s) from {} (kept examples/)", dir.display());
+    Ok(())
+}
+
+fn cmd_annotate(trace: &str, file: &std::path::Path) -> Result<i32> {
+    let project = Project::discover()?;
+    let (path, mut t) = project.load_trace(Some(trace))?;
+    let text = std::fs::read_to_string(file).with_context(|| format!("reading {}", file.display()))?;
+    let (a, report) = visualdebug_core::annotations::validate(&t, &text);
+    for w in &report.warnings {
+        eprintln!("visualdebug: warning: {w}");
+    }
+    for e in &report.errors {
+        eprintln!("visualdebug: error: {e}");
+    }
+    let Some(a) = a.filter(|_| report.errors.is_empty()) else {
+        eprintln!("visualdebug: annotations NOT merged; fix the errors above (step ids come from `visualdebug summarize {}`)", t.name);
+        return Ok(1);
+    };
+    let stops = a.tour.len();
+    let quiz = a.quiz.len();
+    t.annotations = Some(serde_json::to_value(a)?);
+    t.save(&path)?;
+    eprintln!("visualdebug: merged {stops} tour stop(s) and {quiz} quiz question(s) into {}; next: `visualdebug view {}`", path.display(), t.name);
+    Ok(0)
+}
+
+const SKILL_FILES: &[(&str, &str)] = &[
+    ("SKILL.md", include_str!("../skill/visualdebug/SKILL.md")),
+    ("references/ruby.md", include_str!("../skill/visualdebug/references/ruby.md")),
+    ("references/python.md", include_str!("../skill/visualdebug/references/python.md")),
+    ("references/node.md", include_str!("../skill/visualdebug/references/node.md")),
+];
+
+fn cmd_install_skill(project_scope: bool) -> Result<()> {
+    let base = if project_scope {
+        Project::discover()?.root.join(".claude/skills")
+    } else {
+        let home = std::env::var_os("HOME").map(PathBuf::from).context("HOME is not set")?;
+        let config = std::env::var_os("CLAUDE_CONFIG_DIR").map(PathBuf::from).unwrap_or_else(|| home.join(".claude"));
+        config.join("skills")
+    };
+    let dir = base.join("visualdebug");
+    for (rel, body) in SKILL_FILES {
+        let p = dir.join(rel);
+        std::fs::create_dir_all(p.parent().unwrap())?;
+        std::fs::write(&p, body).with_context(|| format!("writing {}", p.display()))?;
+    }
+    eprintln!("visualdebug: installed the skill to {}", dir.display());
+    eprintln!("visualdebug: in Claude Code, ask e.g. \"help me review this PR\" — the skill triggers on its own");
     Ok(())
 }

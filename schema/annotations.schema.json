@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/louisparkes-talbot/visualdebug/schema/annotations.schema.json",
+  "title": "visualdebug annotations, version 1",
+  "description": "Written by an agent (or a human) after reading `visualdebug summarize`; merged with `visualdebug annotate <trace> <file>`, which also rejects step ids that don't exist. Body fields are markdown; `#123` in markdown links to step 123.",
+  "type": "object",
+  "required": ["version"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "title": { "type": "string" },
+    "overview": { "type": "string", "description": "Background and intuition before details: what existed before and why the change was made." },
+    "tour": {
+      "type": "array",
+      "description": "5–12 stops in narrative order (more than ~15 warns).",
+      "items": {
+        "type": "object",
+        "required": ["step", "body"],
+        "additionalProperties": false,
+        "properties": {
+          "step": { "type": "integer", "minimum": 1 },
+          "title": { "type": "string" },
+          "body": { "type": "string", "description": "Explain why, not just what." },
+          "highlight_vars": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step", "body"],
+        "additionalProperties": false,
+        "properties": { "step": { "type": "integer", "minimum": 1 }, "body": { "type": "string" } }
+      }
+    },
+    "quiz": {
+      "type": "array",
+      "description": "3–5 questions that check understanding of the change, not trivia.",
+      "items": {
+        "type": "object",
+        "required": ["question", "options", "answer"],
+        "additionalProperties": false,
+        "properties": {
+          "question": { "type": "string" },
+          "options": { "type": "array", "minItems": 2, "items": { "type": "string" } },
+          "answer": { "type": "integer", "minimum": 0, "description": "0-based index into options." },
+          "explanation": { "type": "string" },
+          "step": { "type": "integer", "minimum": 1, "description": "\"Show me\" jumps here." }
+        }
+      }
+    }
+  }
+}
