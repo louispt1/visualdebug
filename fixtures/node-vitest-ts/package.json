@@ -1,0 +1,1 @@
+{"name":"node-vitest-ts","private":true,"type":"module","scripts":{"test":"vitest run"},"devDependencies":{"tsx":"^4.23.15","typescript":"^7.0.2","vitest":"^4.1.12"}}

@@ -1,0 +1,8 @@
+.visualdebug/
+target/
+node_modules/
+__pycache__/
+.pytest_cache/
+fixtures/rails-app/log/
+fixtures/rails-app/tmp/
+fixtures/rails-app/storage/
