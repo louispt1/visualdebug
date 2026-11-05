@@ -372,9 +372,7 @@
   let effOwner = null, effList = null;
   const nearestNow = () => lastLE(T.effects, T.cur);
 
-  function showHistory(name) {
-    const s = step();
-    const fn = T.frames.get(s.frame) ? T.frames.get(s.frame).fn : null;
+  function showHistory(name, fn) {
     const hist = [];
     let prev = null, prevFrame = null;
     for (let i = 0; i < T.steps.length; i++) {
@@ -541,7 +539,7 @@
     renderTour();
     renderStatus();
     drawTimeline();
-    if (!$("historyPanel").hidden && T.histVar) showHistory(T.histVar);
+    if (!$("historyPanel").hidden && T.histVar) showHistory(T.histVar, T.histFn);
     const hash = (traces.length > 1 ? `t${T.index + 1}/` : "") + `step-${T.cur + 1}`;
     if (location.hash !== "#" + hash) history.replaceState(null, "", "#" + hash);
   }
@@ -574,7 +572,12 @@
       // links written in markdown use 1-based step ids; internal rows use 0-based indices
       return go(t.tagName === "A" ? k - 1 : k);
     }
-    if (t.dataset.var) { T.histVar = t.dataset.var; return showHistory(t.dataset.var); }
+    if (t.dataset.var) {
+      const fr = T.frames.get(step().frame);
+      T.histVar = t.dataset.var;
+      T.histFn = fr ? fr.fn : null;
+      return showHistory(T.histVar, T.histFn);
+    }
     if (t.classList.contains("ln") && T.file) return gotoLine(T.file, +t.dataset.line, e.shiftKey);
   });
   $("historyClose").onclick = () => { $("historyPanel").hidden = true; T.histVar = null; };
