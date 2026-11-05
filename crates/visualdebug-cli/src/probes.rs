@@ -9,11 +9,26 @@ pub struct ProbeFile {
 }
 
 pub const PROBES: &[ProbeFile] = &[
-    ProbeFile { path: "ruby/visualdebug_probe.rb", body: include_str!("../probes/ruby/visualdebug_probe.rb") },
-    ProbeFile { path: "python/sitecustomize.py", body: include_str!("../probes/python/sitecustomize.py") },
-    ProbeFile { path: "python/_visualdebug_probe.py", body: include_str!("../probes/python/_visualdebug_probe.py") },
-    ProbeFile { path: "node/visualdebug_probe.cjs", body: include_str!("../probes/node/visualdebug_probe.cjs") },
-    ProbeFile { path: "node/visualdebug_worker.cjs", body: include_str!("../probes/node/visualdebug_worker.cjs") },
+    ProbeFile {
+        path: "ruby/visualdebug_probe.rb",
+        body: include_str!("../probes/ruby/visualdebug_probe.rb"),
+    },
+    ProbeFile {
+        path: "python/sitecustomize.py",
+        body: include_str!("../probes/python/sitecustomize.py"),
+    },
+    ProbeFile {
+        path: "python/_visualdebug_probe.py",
+        body: include_str!("../probes/python/_visualdebug_probe.py"),
+    },
+    ProbeFile {
+        path: "node/visualdebug_probe.cjs",
+        body: include_str!("../probes/node/visualdebug_probe.cjs"),
+    },
+    ProbeFile {
+        path: "node/visualdebug_worker.cjs",
+        body: include_str!("../probes/node/visualdebug_worker.cjs"),
+    },
 ];
 
 /// `<cache>/probes/<version>-<content hash>/`, populated if missing. The hash keeps dev builds from
@@ -27,9 +42,14 @@ pub fn install() -> Result<PathBuf> {
     }
     let base = std::env::var_os("VISUALDEBUG_CACHE_DIR")
         .map(PathBuf::from)
-        .or_else(|| directories::ProjectDirs::from("", "", "visualdebug").map(|d| d.cache_dir().to_path_buf()))
+        .or_else(|| {
+            directories::ProjectDirs::from("", "", "visualdebug")
+                .map(|d| d.cache_dir().to_path_buf())
+        })
         .context("no cache directory available; set VISUALDEBUG_CACHE_DIR")?;
-    let dir = base.join("probes").join(format!("{}-{:08x}", env!("CARGO_PKG_VERSION"), h as u32));
+    let dir = base
+        .join("probes")
+        .join(format!("{}-{:08x}", env!("CARGO_PKG_VERSION"), h as u32));
     if !dir.join(".complete").exists() {
         for p in PROBES {
             let dest = dir.join(p.path);

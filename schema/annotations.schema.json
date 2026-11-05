@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/louisparkes-talbot/visualdebug/schema/annotations.schema.json",
+  "$id": "https://github.com/louispt1/visualdebug/schema/annotations.schema.json",
   "title": "visualdebug annotations, version 1",
   "description": "Written by an agent (or a human) after reading `visualdebug summarize`; merged with `visualdebug annotate <trace> <file>`, which also rejects step ids that don't exist. Body fields are markdown; `#123` in markdown links to step 123.",
   "type": "object",

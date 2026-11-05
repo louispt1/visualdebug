@@ -20,7 +20,9 @@ pub struct Highlighter {
 
 impl Default for Highlighter {
     fn default() -> Self {
-        Highlighter { syntaxes: two_face::syntax::extra_newlines() }
+        Highlighter {
+            syntaxes: two_face::syntax::extra_newlines(),
+        }
     }
 }
 
@@ -38,9 +40,13 @@ impl Highlighter {
             .syntaxes
             .find_syntax_by_extension(ext)
             .unwrap_or_else(|| self.syntaxes.find_syntax_plain_text());
-        let mut generator = ClassedHTMLGenerator::new_with_class_style(syntax, &self.syntaxes, STYLE);
+        let mut generator =
+            ClassedHTMLGenerator::new_with_class_style(syntax, &self.syntaxes, STYLE);
         for line in LinesWithEndings::from(text) {
-            if generator.parse_html_for_line_which_includes_newline(line).is_err() {
+            if generator
+                .parse_html_for_line_which_includes_newline(line)
+                .is_err()
+            {
                 return text.lines().map(escape).collect();
             }
         }
@@ -86,13 +92,23 @@ fn split_lines(html: &str) -> Vec<String> {
 }
 
 fn escape(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 fn theme_css() -> String {
     let themes = two_face::theme::extra();
-    let light = css_for_theme_with_class_style(themes.get(two_face::theme::EmbeddedThemeName::Github), STYLE).unwrap_or_default();
-    let dark = css_for_theme_with_class_style(themes.get(two_face::theme::EmbeddedThemeName::OneHalfDark), STYLE).unwrap_or_default();
+    let light = css_for_theme_with_class_style(
+        themes.get(two_face::theme::EmbeddedThemeName::Github),
+        STYLE,
+    )
+    .unwrap_or_default();
+    let dark = css_for_theme_with_class_style(
+        themes.get(two_face::theme::EmbeddedThemeName::OneHalfDark),
+        STYLE,
+    )
+    .unwrap_or_default();
     format!("{light}\n@media (prefers-color-scheme: dark) {{\n{dark}\n}}\n")
 }
 
@@ -101,12 +117,20 @@ pub fn bundle(traces: &[Trace], source: &dyn Fn(&str) -> Option<String>) -> Resu
     let hl = Highlighter::default();
     let mut out_traces = Vec::new();
     for t in traces {
-        let files: BTreeSet<&str> = t.steps.iter().filter_map(|s| s.file.as_deref()).chain(t.focus.files.keys().map(String::as_str)).collect();
+        let files: BTreeSet<&str> = t
+            .steps
+            .iter()
+            .filter_map(|s| s.file.as_deref())
+            .chain(t.focus.files.keys().map(String::as_str))
+            .collect();
         let mut file_data: BTreeMap<&str, J> = BTreeMap::new();
         for f in files {
             let Some(text) = source(f) else { continue };
             let changed = t.focus.files.get(f).cloned().unwrap_or_default();
-            file_data.insert(f, json!({ "lines": hl.lines(f, &text), "changed": changed }));
+            file_data.insert(
+                f,
+                json!({ "lines": hl.lines(f, &text), "changed": changed }),
+            );
         }
         out_traces.push(json!({
             "name": t.name,
@@ -123,18 +147,37 @@ pub fn bundle(traces: &[Trace], source: &dyn Fn(&str) -> Option<String>) -> Resu
     }
     let data = json!({ "version": env!("CARGO_PKG_VERSION"), "traces": out_traces });
     // Inline as JSON inside a script tag: "</" must not appear literally.
-    let data = serde_json::to_string(&data)?.replace("</", "<\\/").replace("<!--", "<\\!--");
-    let title = traces.iter().map(|t| t.name.as_str()).collect::<Vec<_>>().join(", ");
+    let data = serde_json::to_string(&data)?
+        .replace("</", "<\\/")
+        .replace("<!--", "<\\!--");
+    let title = traces
+        .iter()
+        .map(|t| t.name.as_str())
+        .collect::<Vec<_>>()
+        .join(", ");
     let title = escape(&format!("visualdebug — {title}"));
     let css = format!("{CSS}\n{}", theme_css());
-    Ok(fill(INDEX, &[("{{TITLE}}", &title), ("{{CSS}}", &css), ("{{DATA}}", &data), ("{{JS}}", JS)]))
+    Ok(fill(
+        INDEX,
+        &[
+            ("{{TITLE}}", &title),
+            ("{{CSS}}", &css),
+            ("{{DATA}}", &data),
+            ("{{JS}}", JS),
+        ],
+    ))
 }
 
 /// Single-pass placeholder substitution (inserted text is never re-scanned).
 fn fill(template: &str, vars: &[(&str, &str)]) -> String {
-    let mut out = String::with_capacity(template.len() + vars.iter().map(|v| v.1.len()).sum::<usize>());
+    let mut out =
+        String::with_capacity(template.len() + vars.iter().map(|v| v.1.len()).sum::<usize>());
     let mut rest = template;
-    while let Some((pos, (k, v))) = vars.iter().filter_map(|kv| rest.find(kv.0).map(|p| (p, kv))).min_by_key(|x| x.0) {
+    while let Some((pos, (k, v))) = vars
+        .iter()
+        .filter_map(|kv| rest.find(kv.0).map(|p| (p, kv)))
+        .min_by_key(|x| x.0)
+    {
         out += &rest[..pos];
         out += v;
         rest = &rest[pos + k.len()..];
@@ -151,17 +194,29 @@ mod tests {
         let lines = split_lines("<span class=\"a\">x\n<span class=\"b\">y</span>\nz</span>");
         assert_eq!(lines.len(), 3);
         assert_eq!(lines[0], "<span class=\"a\">x</span>");
-        assert_eq!(lines[1], "<span class=\"a\"><span class=\"b\">y</span></span>");
+        assert_eq!(
+            lines[1],
+            "<span class=\"a\"><span class=\"b\">y</span></span>"
+        );
         assert_eq!(lines[2], "<span class=\"a\">z</span>");
     }
 
     #[test]
     fn highlights_supported_languages() {
         let hl = Highlighter::default();
-        for (f, src) in [("a.rb", "def x\n  1\nend\n"), ("a.py", "def x():\n    return 1\n"), ("a.ts", "const x: number = 1;\n"), ("a.tsx", "const x = <div/>;\n")] {
+        for (f, src) in [
+            ("a.rb", "def x\n  1\nend\n"),
+            ("a.py", "def x():\n    return 1\n"),
+            ("a.ts", "const x: number = 1;\n"),
+            ("a.tsx", "const x = <div/>;\n"),
+        ] {
             let lines = hl.lines(f, src);
             assert_eq!(lines.len(), src.lines().count(), "{f}");
-            assert!(lines[0].contains("class=\"s-"), "{f} not highlighted: {}", lines[0]);
+            assert!(
+                lines[0].contains("class=\"s-"),
+                "{f} not highlighted: {}",
+                lines[0]
+            );
         }
     }
 }

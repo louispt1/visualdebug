@@ -6,7 +6,8 @@ resolver = "2"
 version = "0.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/louisparkes-talbot/visualdebug"
+repository = "https://github.com/louispt1/visualdebug"
+homepage = "https://github.com/louispt1/visualdebug"
 rust-version = "1.85"
 
 [workspace.dependencies]
@@ -19,3 +20,8 @@ serde_json = { version = "1", features = ["preserve_order"] }
 [profile.release]
 lto = "thin"
 strip = true
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

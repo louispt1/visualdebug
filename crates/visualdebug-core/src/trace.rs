@@ -141,9 +141,16 @@ impl Trace {
 
     pub fn load(path: &std::path::Path) -> anyhow::Result<Trace> {
         use anyhow::Context;
-        let text = std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
-        let t: Trace = serde_json::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
-        anyhow::ensure!(t.version == TRACE_VERSION, "{}: unsupported trace version {}", path.display(), t.version);
+        let text =
+            std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+        let t: Trace =
+            serde_json::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
+        anyhow::ensure!(
+            t.version == TRACE_VERSION,
+            "{}: unsupported trace version {}",
+            path.display(),
+            t.version
+        );
         Ok(t)
     }
 

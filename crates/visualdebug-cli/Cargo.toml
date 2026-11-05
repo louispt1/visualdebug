@@ -5,10 +5,12 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 readme = "../../README.md"
 keywords = ["debugger", "tracing", "code-review", "ruby", "python"]
 categories = ["development-tools::debugging", "command-line-utilities"]
+exclude = ["probes/**/__pycache__", "probes/*/test", "probes/*/tests"]
 
 [[bin]]
 name = "visualdebug"

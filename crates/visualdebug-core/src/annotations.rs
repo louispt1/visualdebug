@@ -69,29 +69,44 @@ pub fn validate(trace: &Trace, json: &str) -> (Option<Annotations>, Report) {
         }
     };
     if a.version != 1 {
-        r.errors.push(format!("version must be 1 (got {})", a.version));
+        r.errors
+            .push(format!("version must be 1 (got {})", a.version));
     }
     let n = trace.steps.len() as u32;
     let step_ok = |s: u32| s >= 1 && s <= n;
-    let range = if n == 0 { "the trace has no steps".to_string() } else { format!("valid steps are 1..={n}") };
+    let range = if n == 0 {
+        "the trace has no steps".to_string()
+    } else {
+        format!("valid steps are 1..={n}")
+    };
     for (i, s) in a.tour.iter().enumerate() {
         if !step_ok(s.step) {
-            r.errors.push(format!("tour[{i}] targets step {} which doesn't exist ({range})", s.step));
+            r.errors.push(format!(
+                "tour[{i}] targets step {} which doesn't exist ({range})",
+                s.step
+            ));
             continue;
         }
         if s.body.trim().is_empty() {
-            r.errors.push(format!("tour[{i}] (step {}) has an empty body", s.step));
+            r.errors
+                .push(format!("tour[{i}] (step {}) has an empty body", s.step));
         }
         let locals = trace.step(s.step).and_then(|st| st.locals.as_ref());
         for v in &s.highlight_vars {
             if !locals.is_some_and(|l| l.contains_key(v)) {
-                r.warnings.push(format!("tour[{i}] highlights {v:?}, which isn't a variable at step {}", s.step));
+                r.warnings.push(format!(
+                    "tour[{i}] highlights {v:?}, which isn't a variable at step {}",
+                    s.step
+                ));
             }
         }
     }
     for (i, s) in a.notes.iter().enumerate() {
         if !step_ok(s.step) {
-            r.errors.push(format!("notes[{i}] targets step {} which doesn't exist ({range})", s.step));
+            r.errors.push(format!(
+                "notes[{i}] targets step {} which doesn't exist ({range})",
+                s.step
+            ));
         }
     }
     for (i, q) in a.quiz.iter().enumerate() {
@@ -99,22 +114,33 @@ pub fn validate(trace: &Trace, json: &str) -> (Option<Annotations>, Report) {
             r.errors.push(format!("quiz[{i}] needs at least 2 options"));
         }
         if q.answer >= q.options.len() {
-            r.errors.push(format!("quiz[{i}].answer is {} but there are {} options (0-based)", q.answer, q.options.len()));
+            r.errors.push(format!(
+                "quiz[{i}].answer is {} but there are {} options (0-based)",
+                q.answer,
+                q.options.len()
+            ));
         }
         if let Some(s) = q.step
             && !step_ok(s)
         {
-            r.errors.push(format!("quiz[{i}] links step {s} which doesn't exist ({range})"));
+            r.errors.push(format!(
+                "quiz[{i}] links step {s} which doesn't exist ({range})"
+            ));
         }
     }
     if a.tour.len() > MAX_TOUR_STOPS {
-        r.warnings.push(format!("the tour has {} stops; more than ~{MAX_TOUR_STOPS} loses the reader — aim for 5–12", a.tour.len()));
+        r.warnings.push(format!(
+            "the tour has {} stops; more than ~{MAX_TOUR_STOPS} loses the reader — aim for 5–12",
+            a.tour.len()
+        ));
     }
     if a.tour.is_empty() {
-        r.warnings.push("no tour stops: the viewer will open in free-scrubbing mode".into());
+        r.warnings
+            .push("no tour stops: the viewer will open in free-scrubbing mode".into());
     }
     if a.overview.trim().is_empty() && !a.tour.is_empty() {
-        r.warnings.push("no overview: give background and intuition before the first stop".into());
+        r.warnings
+            .push("no overview: give background and intuition before the first stop".into());
     }
     (Some(a), r)
 }
@@ -142,7 +168,10 @@ mod tests {
 
     #[test]
     fn rejects_bad_steps_answers_and_typos() {
-        let (_, r) = validate(&trace(), r#"{"version":1,"tour":[{"step":9,"body":"b"}],"quiz":[{"question":"q","options":["a"],"answer":3}]}"#);
+        let (_, r) = validate(
+            &trace(),
+            r#"{"version":1,"tour":[{"step":9,"body":"b"}],"quiz":[{"question":"q","options":["a"],"answer":3}]}"#,
+        );
         assert_eq!(r.errors.len(), 3, "{:?}", r.errors);
         let (_, r) = validate(&trace(), r#"{"version":1,"tuor":[]}"#);
         assert!(r.errors[0].contains("unknown field"));

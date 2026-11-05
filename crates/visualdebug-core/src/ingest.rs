@@ -64,7 +64,10 @@ pub struct IngestReport {
 
 pub fn ingest_dir(dir: &Path, info: RunInfo) -> Result<(Trace, IngestReport)> {
     let mut texts = Vec::new();
-    let mut entries: Vec<_> = std::fs::read_dir(dir)?.filter_map(|e| e.ok()).map(|e| e.path()).collect();
+    let mut entries: Vec<_> = std::fs::read_dir(dir)?
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .collect();
     entries.sort();
     for p in entries {
         let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
@@ -75,7 +78,10 @@ pub fn ingest_dir(dir: &Path, info: RunInfo) -> Result<(Trace, IngestReport)> {
     Ok(ingest(texts.iter().map(String::as_str), info))
 }
 
-pub fn ingest<'a>(files: impl IntoIterator<Item = &'a str>, info: RunInfo) -> (Trace, IngestReport) {
+pub fn ingest<'a>(
+    files: impl IntoIterator<Item = &'a str>,
+    info: RunInfo,
+) -> (Trace, IngestReport) {
     let mut report = IngestReport::default();
     let mut events = Vec::new();
     let mut truncated = false;
@@ -118,7 +124,10 @@ pub fn ingest<'a>(files: impl IntoIterator<Item = &'a str>, info: RunInfo) -> (T
             _ => continue,
         };
         let next = frames.len() as u32 + 1;
-        let frame = e.frame_id.map(|f| *frames.entry((e.pid, f)).or_insert(next)).unwrap_or(0);
+        let frame = e
+            .frame_id
+            .map(|f| *frames.entry((e.pid, f)).or_insert(next))
+            .unwrap_or(0);
 
         if e.library && kind == Kind::Return {
             // Attach to the matching open library call; never its own step.
@@ -192,7 +201,8 @@ pub fn diff_locals(prev: &Locals, now: &Locals) -> Diff {
         match prev.get(k) {
             None => d.added.push(k.clone()),
             Some(p) if repr_of(p) != repr_of(v) => {
-                d.changed.insert(k.clone(), serde_json::Value::String(repr_of(p).to_string()));
+                d.changed
+                    .insert(k.clone(), serde_json::Value::String(repr_of(p).to_string()));
                 if p.get("id").is_some() && p.get("id") == v.get("id") {
                     d.mutated.push(k.clone());
                 }
@@ -200,7 +210,11 @@ pub fn diff_locals(prev: &Locals, now: &Locals) -> Diff {
             _ => {}
         }
     }
-    d.removed = prev.keys().filter(|k| !now.contains_key(*k)).cloned().collect();
+    d.removed = prev
+        .keys()
+        .filter(|k| !now.contains_key(*k))
+        .cloned()
+        .collect();
     d
 }
 
@@ -210,7 +224,14 @@ mod tests {
 
     fn run(lines: &[&str]) -> Trace {
         let text = lines.join("\n");
-        ingest([text.as_str()], RunInfo { name: "t".into(), ..Default::default() }).0
+        ingest(
+            [text.as_str()],
+            RunInfo {
+                name: "t".into(),
+                ..Default::default()
+            },
+        )
+        .0
     }
 
     #[test]

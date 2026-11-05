@@ -41,10 +41,25 @@ pub struct Summary {
 }
 
 /// `source(file, line)` returns that source line, if available.
-pub fn summarize(t: &Trace, source: &dyn Fn(&str, u32) -> Option<String>, max_lines: usize) -> Summary {
-    let base = t.steps.iter().map(|s| s.depth).min().unwrap_or(1).saturating_sub(1);
+pub fn summarize(
+    t: &Trace,
+    source: &dyn Fn(&str, u32) -> Option<String>,
+    max_lines: usize,
+) -> Summary {
+    let base = t
+        .steps
+        .iter()
+        .map(|s| s.depth)
+        .min()
+        .unwrap_or(1)
+        .saturating_sub(1);
     let max_seen = t.steps.iter().map(|s| s.depth).max().unwrap_or(0);
-    let mut cx = Cx { t, source, base, max_depth: u32::MAX };
+    let mut cx = Cx {
+        t,
+        source,
+        base,
+        max_depth: u32::MAX,
+    };
     let mut rows = cx.render(base);
     let mut elided = false;
     // Too long: collapse deeper frames first, then cut the middle.
@@ -58,7 +73,12 @@ pub fn summarize(t: &Trace, source: &dyn Fn(&str, u32) -> Option<String>, max_li
     if rows.len() > max_lines && max_lines >= 3 {
         let keep_head = max_lines * 2 / 3;
         let keep_tail = max_lines - keep_head - 1;
-        let (a, b) = (rows[keep_head].step, rows[rows.len() - keep_tail - 1].end_step.unwrap_or(rows[rows.len() - keep_tail - 1].step));
+        let (a, b) = (
+            rows[keep_head].step,
+            rows[rows.len() - keep_tail - 1]
+                .end_step
+                .unwrap_or(rows[rows.len() - keep_tail - 1].step),
+        );
         let marker = Row {
             step: a,
             end_step: Some(b),
@@ -68,7 +88,10 @@ pub fn summarize(t: &Trace, source: &dyn Fn(&str, u32) -> Option<String>, max_li
             line: None,
             line_end: None,
             changed: false,
-            text: format!("… {} rows omitted (raise --max-lines, or re-run with a narrower --start-at)", rows.len() - keep_head - keep_tail),
+            text: format!(
+                "… {} rows omitted (raise --max-lines, or re-run with a narrower --start-at)",
+                rows.len() - keep_head - keep_tail
+            ),
             vars: String::new(),
         };
         let tail = rows.split_off(rows.len() - keep_tail);
@@ -89,7 +112,13 @@ pub fn summarize(t: &Trace, source: &dyn Fn(&str, u32) -> Option<String>, max_li
             .focus
             .files
             .iter()
-            .map(|(f, r)| if r.is_empty() { f.clone() } else { format!("{f} [changed {}]", fmt_ranges(r)) })
+            .map(|(f, r)| {
+                if r.is_empty() {
+                    f.clone()
+                } else {
+                    format!("{f} [changed {}]", fmt_ranges(r))
+                }
+            })
             .collect(),
         rows,
         elided,
@@ -109,8 +138,15 @@ pub fn render_text(s: &Summary, t: &Trace) -> String {
         s.steps,
         s.shown,
         status,
-        s.language.as_deref().map(|l| format!("; {l}")).unwrap_or_default(),
-        if s.truncated { "; TRUNCATED at max events" } else { "" }
+        s.language
+            .as_deref()
+            .map(|l| format!("; {l}"))
+            .unwrap_or_default(),
+        if s.truncated {
+            "; TRUNCATED at max events"
+        } else {
+            ""
+        }
     );
     if !s.command.is_empty() {
         out += &format!("command: {}\n", s.command.join(" "));
@@ -157,7 +193,16 @@ fn short_names(t: &Trace) -> HashMap<&str, String> {
     }
     files
         .into_iter()
-        .map(|f| (f, if count[basename(f)] > 1 { f.to_string() } else { basename(f).to_string() }))
+        .map(|f| {
+            (
+                f,
+                if count[basename(f)] > 1 {
+                    f.to_string()
+                } else {
+                    basename(f).to_string()
+                },
+            )
+        })
         .collect()
 }
 
@@ -197,7 +242,9 @@ impl Cx<'_> {
             let s = &self.steps()[i];
             if s.depth <= d {
                 items.push(Item::Own(i));
-            } else if s.depth == d + 1 && (s.kind.is_call() || s.library) || !matches!(items.last(), Some(Item::Child(..))) {
+            } else if s.depth == d + 1 && (s.kind.is_call() || s.library)
+                || !matches!(items.last(), Some(Item::Child(..)))
+            {
                 items.push(Item::Child(i, i + 1));
             } else if let Some(Item::Child(_, e)) = items.last_mut() {
                 *e = i + 1;
@@ -246,7 +293,13 @@ impl Cx<'_> {
     }
 
     /// A line H that re-executes with only higher lines (and calls) in between, in one frame.
-    fn backedge_loop(&self, items: &[Item], i: usize, d: u32, rows: &mut Vec<Row>) -> Option<usize> {
+    fn backedge_loop(
+        &self,
+        items: &[Item],
+        i: usize,
+        d: u32,
+        rows: &mut Vec<Row>,
+    ) -> Option<usize> {
         let Item::Own(h) = items[i] else { return None };
         let head = &self.steps()[h];
         if head.kind != Kind::Line {
@@ -301,14 +354,25 @@ impl Cx<'_> {
             line: Some(hl),
             line_end: Some(maxline),
             changed: self.any_changed(s, e),
-            text: format!("loop ×{iters}{}", self.src(head).map(|t| format!("  │ {t}")).unwrap_or_default()),
+            text: format!(
+                "loop ×{iters}{}",
+                self.src(head)
+                    .map(|t| format!("  │ {t}"))
+                    .unwrap_or_default()
+            ),
             vars,
         });
         Some(end)
     }
 
     /// Consecutive sibling calls of the same function (e.g. Ruby `each` blocks).
-    fn repeated_children(&self, items: &[Item], i: usize, d: u32, rows: &mut Vec<Row>) -> Option<usize> {
+    fn repeated_children(
+        &self,
+        items: &[Item],
+        i: usize,
+        d: u32,
+        rows: &mut Vec<Row>,
+    ) -> Option<usize> {
         let key = |it: &Item| match *it {
             Item::Child(s, _) => {
                 let st = &self.steps()[s];
@@ -317,14 +381,25 @@ impl Cx<'_> {
             _ => None,
         };
         let k = key(&items[i])?;
-        let n = items[i..].iter().take_while(|it| key(it).as_ref() == Some(&k)).count();
+        let n = items[i..]
+            .iter()
+            .take_while(|it| key(it).as_ref() == Some(&k))
+            .count();
         if n < 2 {
             return None;
         }
         let (s, e) = self.item_range(items, i, i + n);
         let first = &self.steps()[s];
-        let parent = self.steps()[..s].iter().rev().find(|x| x.depth == d).map(|x| x.frame);
-        let lines: Vec<u32> = self.steps()[s..e].iter().filter(|x| x.frame == first.frame).filter_map(|x| x.line).collect();
+        let parent = self.steps()[..s]
+            .iter()
+            .rev()
+            .find(|x| x.depth == d)
+            .map(|x| x.frame);
+        let lines: Vec<u32> = self.steps()[s..e]
+            .iter()
+            .filter(|x| x.frame == first.frame)
+            .filter_map(|x| x.line)
+            .collect();
         rows.push(Row {
             step: first.id,
             end_step: Some(self.steps()[e - 1].id),
@@ -335,7 +410,9 @@ impl Cx<'_> {
             line_end: lines.iter().max().copied(),
             changed: self.any_changed(s, e),
             text: format!("loop ×{n} {}", first.function.as_deref().unwrap_or("?")),
-            vars: parent.map(|f| self.frame_change(f, s, e)).unwrap_or_default(),
+            vars: parent
+                .map(|f| self.frame_change(f, s, e))
+                .unwrap_or_default(),
         });
         Some(i + n)
     }
@@ -349,19 +426,36 @@ impl Cx<'_> {
     /// How frame `f`'s variables differ from just before [s, e) to just after it.
     fn frame_change(&self, f: u32, s: usize, e: usize) -> String {
         let steps = self.steps();
-        let before = steps[..s].iter().rev().find(|x| x.frame == f && x.locals.is_some());
+        let before = steps[..s]
+            .iter()
+            .rev()
+            .find(|x| x.frame == f && x.locals.is_some());
         let after = steps[e..]
             .iter()
             .find(|x| x.frame == f && x.locals.is_some())
-            .or_else(|| steps[s..e].iter().rev().find(|x| x.frame == f && x.locals.is_some()));
-        let (Some(b), Some(a)) = (before.and_then(|x| x.locals.as_ref()), after.and_then(|x| x.locals.as_ref())) else {
+            .or_else(|| {
+                steps[s..e]
+                    .iter()
+                    .rev()
+                    .find(|x| x.frame == f && x.locals.is_some())
+            });
+        let (Some(b), Some(a)) = (
+            before.and_then(|x| x.locals.as_ref()),
+            after.and_then(|x| x.locals.as_ref()),
+        ) else {
             return String::new();
         };
         let parts: Vec<String> = a
             .iter()
             .filter_map(|(k, v)| {
                 let old = b.get(k)?;
-                (repr_of(old) != repr_of(v)).then(|| format!("{k}: {} → {}", short(repr_of(old), 30), short(repr_of(v), 30)))
+                (repr_of(old) != repr_of(v)).then(|| {
+                    format!(
+                        "{k}: {} → {}",
+                        short(repr_of(old), 30),
+                        short(repr_of(v), 30)
+                    )
+                })
             })
             .collect();
         cap(parts)
@@ -391,7 +485,11 @@ impl Cx<'_> {
             line: first.line,
             line_end: None,
             changed: self.any_changed(s, e),
-            text: format!("→ {} … ({} steps){ret}", first.function.as_deref().unwrap_or("?"), e - s),
+            text: format!(
+                "→ {} … ({} steps){ret}",
+                first.function.as_deref().unwrap_or("?"),
+                e - s
+            ),
             vars: String::new(),
         }
     }
@@ -401,25 +499,55 @@ impl Cx<'_> {
         let func = s.function.as_deref().unwrap_or("?");
         let (kind, text, vars) = match s.kind {
             Kind::Call if s.library => {
-                let ret = s.return_value.as_ref().map(|v| format!(" returned {}", short(&v.repr, 50))).unwrap_or_default();
-                ("library_call", format!("→ {func} (library){ret}"), String::new())
+                let ret = s
+                    .return_value
+                    .as_ref()
+                    .map(|v| format!(" returned {}", short(&v.repr, 50)))
+                    .unwrap_or_default();
+                (
+                    "library_call",
+                    format!("→ {func} (library){ret}"),
+                    String::new(),
+                )
             }
             Kind::Call => ("call", format!("→ {func}"), args(s.locals.as_ref(), 3)),
-            Kind::BlockCall => ("block_call", format!("→ {func}"), args(s.locals.as_ref(), 2)),
-            Kind::Line => ("line", self.src(s).map(|t| format!("│ {t}")).unwrap_or_else(|| "│".into()), diff_text(s)),
+            Kind::BlockCall => (
+                "block_call",
+                format!("→ {func}"),
+                args(s.locals.as_ref(), 2),
+            ),
+            Kind::Line => (
+                "line",
+                self.src(s)
+                    .map(|t| format!("│ {t}"))
+                    .unwrap_or_else(|| "│".into()),
+                diff_text(s),
+            ),
             Kind::Return | Kind::BlockReturn => {
-                let v = s.return_value.as_ref().map(|v| short(&v.repr, 60)).unwrap_or_else(|| "?".into());
+                let v = s
+                    .return_value
+                    .as_ref()
+                    .map(|v| short(&v.repr, 60))
+                    .unwrap_or_else(|| "?".into());
                 ("return", format!("← {func} returned {v}"), String::new())
             }
             Kind::Raise => {
                 let e = s.exception.as_ref();
                 (
                     "raise",
-                    format!("!! raise {}: {}", e.map(|e| e.ty.as_str()).unwrap_or("?"), short(e.map(|e| e.message.as_str()).unwrap_or(""), 80)),
+                    format!(
+                        "!! raise {}: {}",
+                        e.map(|e| e.ty.as_str()).unwrap_or("?"),
+                        short(e.map(|e| e.message.as_str()).unwrap_or(""), 80)
+                    ),
                     String::new(),
                 )
             }
-            Kind::SideEffect => ("side_effect", side_effect_text(s.side_effect.as_ref()), String::new()),
+            Kind::SideEffect => (
+                "side_effect",
+                side_effect_text(s.side_effect.as_ref()),
+                String::new(),
+            ),
         };
         Row {
             step: s.id,
@@ -429,7 +557,8 @@ impl Cx<'_> {
             file: s.file.clone(),
             line: s.line,
             line_end: None,
-            changed: matches!((&s.file, s.line), (Some(f), Some(l)) if self.t.is_changed(f, l)) && !s.library,
+            changed: matches!((&s.file, s.line), (Some(f), Some(l)) if self.t.is_changed(f, l))
+                && !s.library,
             text,
             vars,
         }
@@ -437,12 +566,21 @@ impl Cx<'_> {
 }
 
 fn side_effect_text(v: Option<&serde_json::Value>) -> String {
-    let Some(v) = v else { return "side effect".into() };
+    let Some(v) = v else {
+        return "side effect".into();
+    };
     match v.get("kind").and_then(|k| k.as_str()) {
         Some("sql") => {
             let sql = v.get("sql").and_then(|s| s.as_str()).unwrap_or("");
-            let ms = v.get("duration_ms").and_then(|d| d.as_f64()).map(|d| format!("  ({d:.1}ms)")).unwrap_or_default();
-            format!("SQL  {}{ms}", short(&sql.split_whitespace().collect::<Vec<_>>().join(" "), 100))
+            let ms = v
+                .get("duration_ms")
+                .and_then(|d| d.as_f64())
+                .map(|d| format!("  ({d:.1}ms)"))
+                .unwrap_or_default();
+            format!(
+                "SQL  {}{ms}",
+                short(&sql.split_whitespace().collect::<Vec<_>>().join(" "), 100)
+            )
         }
         Some(k) => format!("{k}  {}", short(&v.to_string(), 100)),
         None => short(&v.to_string(), 100),
@@ -450,7 +588,9 @@ fn side_effect_text(v: Option<&serde_json::Value>) -> String {
 }
 
 fn args(locals: Option<&Locals>, n: usize) -> String {
-    let Some(l) = locals else { return String::new() };
+    let Some(l) = locals else {
+        return String::new();
+    };
     cap(l
         .iter()
         .filter(|(k, v)| !k.starts_with('@') && !matches!(repr_of(v), "nil" | "None" | "undefined"))
@@ -460,13 +600,22 @@ fn args(locals: Option<&Locals>, n: usize) -> String {
 }
 
 fn diff_text(s: &Step) -> String {
-    let (Some(d), Some(l)) = (&s.diff, &s.locals) else { return String::new() };
+    let (Some(d), Some(l)) = (&s.diff, &s.locals) else {
+        return String::new();
+    };
     let mut parts = Vec::new();
     for k in &d.added {
-        parts.push(format!("{k}: (new) {}", short(l.get(k).map(repr_of).unwrap_or("?"), 40)));
+        parts.push(format!(
+            "{k}: (new) {}",
+            short(l.get(k).map(repr_of).unwrap_or("?"), 40)
+        ));
     }
     for (k, before) in &d.changed {
-        let m = if d.mutated.contains(k) { " (mutated)" } else { "" };
+        let m = if d.mutated.contains(k) {
+            " (mutated)"
+        } else {
+            ""
+        };
         parts.push(format!(
             "{k}: {} → {}{m}",
             short(before.as_str().unwrap_or("?"), 30),
@@ -487,5 +636,9 @@ fn cap(mut parts: Vec<String>) -> String {
 
 pub fn short(s: &str, n: usize) -> String {
     let one: String = s.chars().map(|c| if c == '\n' { ' ' } else { c }).collect();
-    if one.chars().count() > n { one.chars().take(n).collect::<String>() + "…" } else { one }
+    if one.chars().count() > n {
+        one.chars().take(n).collect::<String>() + "…"
+    } else {
+        one
+    }
 }

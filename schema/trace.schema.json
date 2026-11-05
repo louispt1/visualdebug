@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/louisparkes-talbot/visualdebug/schema/trace.schema.json",
+  "$id": "https://github.com/louispt1/visualdebug/schema/trace.schema.json",
   "title": "visualdebug trace (normalized), version 1",
   "description": "Written by `visualdebug run` to .visualdebug/traces/<name>.json. Probe events (the JSONL the probes write) are described under $defs.probeEvent.",
   "type": "object",

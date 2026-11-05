@@ -35,7 +35,9 @@ impl Project {
         let cwd = std::env::current_dir()?;
         let root = find_root(&cwd);
         // Canonical, because some runtimes report realpaths (Node; macOS's /var -> /private/var).
-        Ok(Project { root: root.canonicalize().unwrap_or(root) })
+        Ok(Project {
+            root: root.canonicalize().unwrap_or(root),
+        })
     }
 
     pub fn dir(&self) -> PathBuf {
@@ -57,9 +59,18 @@ impl Project {
         std::fs::create_dir_all(&dir)?;
         let gi = self.root.join(".gitignore");
         if let Ok(text) = std::fs::read_to_string(&gi)
-            && !text.lines().any(|l| matches!(l.trim(), ".visualdebug" | ".visualdebug/" | "/.visualdebug" | "/.visualdebug/"))
+            && !text.lines().any(|l| {
+                matches!(
+                    l.trim(),
+                    ".visualdebug" | ".visualdebug/" | "/.visualdebug" | "/.visualdebug/"
+                )
+            })
         {
-            let sep = if text.ends_with('\n') || text.is_empty() { "" } else { "\n" };
+            let sep = if text.ends_with('\n') || text.is_empty() {
+                ""
+            } else {
+                "\n"
+            };
             std::fs::write(&gi, format!("{text}{sep}.visualdebug/\n"))?;
             eprintln!("visualdebug: added .visualdebug/ to {}", gi.display());
         }
@@ -72,7 +83,9 @@ impl Project {
         if p.is_file() {
             return Ok(p);
         }
-        let named = self.traces_dir().join(format!("{}.json", arg.trim_end_matches(".json")));
+        let named = self
+            .traces_dir()
+            .join(format!("{}.json", arg.trim_end_matches(".json")));
         if named.is_file() {
             return Ok(named);
         }
@@ -98,7 +111,10 @@ impl Project {
     }
 
     pub fn latest_trace(&self) -> Result<PathBuf> {
-        let name = self.trace_names().pop().context("nothing recorded yet (run `visualdebug run -- <command>`)")?;
+        let name = self
+            .trace_names()
+            .pop()
+            .context("nothing recorded yet (run `visualdebug run -- <command>`)")?;
         Ok(self.traces_dir().join(format!("{name}.json")))
     }
 
@@ -130,7 +146,11 @@ pub fn git(dir: &Path, args: &[&str]) -> Result<String> {
         .output()
         .context("running git (is it installed?)")?;
     if !out.status.success() {
-        bail!("git {} failed: {}", args.join(" "), String::from_utf8_lossy(&out.stderr).trim());
+        bail!(
+            "git {} failed: {}",
+            args.join(" "),
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
     }
     Ok(String::from_utf8_lossy(&out.stdout).into_owned())
 }
@@ -143,13 +163,18 @@ pub struct Sources<'a> {
 
 impl<'a> Sources<'a> {
     pub fn new(project: &'a Project) -> Self {
-        Sources { project, cache: Default::default() }
+        Sources {
+            project,
+            cache: Default::default(),
+        }
     }
     pub fn line(&self, file: &str, line: u32) -> Option<String> {
         let mut c = self.cache.borrow_mut();
-        let lines = c
-            .entry(file.to_string())
-            .or_insert_with(|| self.project.source(file).map(|s| s.lines().map(str::to_string).collect()));
+        let lines = c.entry(file.to_string()).or_insert_with(|| {
+            self.project
+                .source(file)
+                .map(|s| s.lines().map(str::to_string).collect())
+        });
         lines.as_ref()?.get(line.checked_sub(1)? as usize).cloned()
     }
 }

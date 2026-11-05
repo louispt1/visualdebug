@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    name: Rust + golden fixtures (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0" # golden Ruby snapshots are recorded on 4.0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Fixture dependencies
+        run: |
+          (cd fixtures/rails-app && bundle install && RAILS_ENV=test bin/rails db:schema:load)
+          (cd fixtures/ruby-plain && bundle install)
+          python -m pip install pytest
+          (cd fixtures/node-jest && npm ci) && (cd fixtures/node-vitest-ts && npm ci)
+      - run: cargo fmt --all --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - name: cargo test
+        run: cargo test
+        env:
+          VISUALDEBUG_TEST_PYTHON: python
+          INSTA_UPDATE: "no"
+
+  ruby-probe:
+    name: Ruby ${{ matrix.ruby }} probe (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        ruby: ["3.3", "3.4", "4.0"]
+        include:
+          - { os: ubuntu-latest, ruby: "3.2", experimental: true }
+    continue-on-error: ${{ matrix.experimental == true }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+      - run: gem install minitest && ruby probes/ruby/test/probe_test.rb
+
+  python-probe:
+    name: Python ${{ matrix.python }} probe (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.11", "3.12", "3.13", "3.14"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest pytest-xdist django
+      - run: python -m unittest discover -s probes/python/tests -v
+        env:
+          PYTHON: python
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Python golden fixtures
+        run: cargo test -p visualdebug --test fixtures python_
+        env:
+          VISUALDEBUG_TEST_PYTHON: python
+          INSTA_UPDATE: "no"
+
+  node-probe:
+    name: Node ${{ matrix.node }} probe (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: ["20", "22", "24"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: node --test probes/node/test/probe.test.cjs
+      - run: (cd fixtures/node-jest && npm ci) && (cd fixtures/node-vitest-ts && npm ci)
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Node golden fixtures
+        run: cargo test -p visualdebug --test fixtures node_
+        env:
+          INSTA_UPDATE: "no"
