@@ -122,9 +122,12 @@ fn cmd_view(names: &[String], out: Option<PathBuf>, no_open: bool) -> Result<()>
     std::fs::write(&out, html).with_context(|| format!("writing {}", out.display()))?;
     let steps: usize = traces.iter().map(|t| t.steps.len()).sum();
     eprintln!("visualdebug: wrote {} ({} trace(s), {steps} steps)", out.display(), traces.len());
-    if !no_open && std::env::var_os("VISUALDEBUG_NO_OPEN").is_none() {
-        if let Err(e) = opener::open(&out) {
-            eprintln!("visualdebug: couldn't open a browser ({e}); open the file above manually");
+    if no_open || std::env::var_os("VISUALDEBUG_NO_OPEN").is_some() {
+        eprintln!("visualdebug: not opening a browser (--no-open / VISUALDEBUG_NO_OPEN); give the user the path above");
+    } else {
+        match opener::open(&out) {
+            Ok(()) => eprintln!("visualdebug: opened it in the default browser"),
+            Err(e) => eprintln!("visualdebug: couldn't open a browser ({e}); give the user the path above"),
         }
     }
     Ok(())
