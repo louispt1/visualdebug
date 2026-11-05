@@ -120,9 +120,14 @@ with a long written review.
 ## Situations
 
 **Failing traces.** A failing test's trace is valuable: annotate where behaviour diverges from what
-the test expected (the step whose variable or branch is wrong), and say so in the overview. If the
-PR fixes a bug, tracing the edge case *before* the fix (e.g. `git stash` or a checkout of the base in
-a worktree, with the user's agreement) and after makes a great pair of tabs.
+the test expected (the step whose variable or branch is wrong), and say so in the overview.
+
+**Before vs after.** When the question is "what does this change *change*" (a bug fix, a refactor
+that should be behaviour-preserving, a performance tweak), run the same example on both versions:
+`visualdebug compare <base> --start-at <entry> -- <cmd>`. It uses a temporary git worktree (your
+working tree is untouched), prints the first divergence (control: different code ran; data: same
+code, different value), and `visualdebug view <name>` shows both side by side starting there. The
+command must exist and work on the base too (an example in `.visualdebug/examples/` is copied over).
 
 **Huge Rails boots / big apps.** Always pass `--start-at` (the controller action or service entry
 point); otherwise boot noise and setup dominate. Prefer a single example (`spec/x_spec.rb:42`).

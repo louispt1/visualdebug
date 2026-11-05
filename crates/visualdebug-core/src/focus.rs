@@ -16,6 +16,7 @@ pub fn parse_unified_diff(text: &str, subdir: &str) -> BTreeMap<String, Vec<(u32
         if let Some(path) = line.strip_prefix("+++ ") {
             current = path
                 .strip_prefix("b/")
+                .or_else(|| path.strip_prefix("a/")) // `git diff -R` labels the new side a/
                 .and_then(|p| p.strip_prefix(prefix.as_str()))
                 .map(|p| p.trim_end().to_string());
             if let Some(f) = &current {

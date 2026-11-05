@@ -191,6 +191,7 @@ pub fn ingest<'a>(
         raw_events: report.raw_events as u32,
         steps,
         annotations: None,
+        compare: None,
     };
     (trace, report)
 }

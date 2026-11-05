@@ -55,6 +55,9 @@ visualdebug run --focus-diff main -- npx vitest run src/pricing.test.ts
 visualdebug summarize pricer_spec-42     # compact, step-numbered text (what an agent reads)
 visualdebug view pricer_spec-42          # bundle into .visualdebug/view-pricer_spec-42.html and open it
 visualdebug annotate pricer_spec-42 notes.json   # add your own tour (schema/annotations.schema.json)
+visualdebug compare main --start-at "Pricer#call" -- bundle exec rspec spec/services/pricer_spec.rb:42
+                                         # same example on main (temporary worktree) vs HEAD, side by side,
+                                         # opening at the first step where behaviour diverges
 ```
 
 - `--focus-diff BASE` records changed files line by line (committed and uncommitted changes since

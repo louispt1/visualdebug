@@ -113,7 +113,7 @@ fn theme_css() -> String {
 }
 
 /// Build the HTML. `source(rel_path)` returns a project file's text.
-pub fn bundle(traces: &[Trace], source: &dyn Fn(&str) -> Option<String>) -> Result<String> {
+pub fn bundle(traces: &[Trace], source: &dyn Fn(&Trace, &str) -> Option<String>) -> Result<String> {
     let hl = Highlighter::default();
     let mut out_traces = Vec::new();
     for t in traces {
@@ -125,7 +125,7 @@ pub fn bundle(traces: &[Trace], source: &dyn Fn(&str) -> Option<String>) -> Resu
             .collect();
         let mut file_data: BTreeMap<&str, J> = BTreeMap::new();
         for f in files {
-            let Some(text) = source(f) else { continue };
+            let Some(text) = source(t, f) else { continue };
             let changed = t.focus.files.get(f).cloned().unwrap_or_default();
             file_data.insert(
                 f,
@@ -143,6 +143,7 @@ pub fn bundle(traces: &[Trace], source: &dyn Fn(&str) -> Option<String>) -> Resu
             "steps": t.steps,
             "files": file_data,
             "annotations": t.annotations,
+            "compare": t.compare,
         }));
     }
     let data = json!({ "version": env!("CARGO_PKG_VERSION"), "traces": out_traces });

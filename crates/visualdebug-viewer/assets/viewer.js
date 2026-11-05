@@ -70,7 +70,8 @@
       });
     }
     return { raw, index, steps, frames, lineSteps, effects, lineLevel, ann, stopAt, notesAt,
-             cur: 0, file: null, tourOn: !!ann, tourIdx: ann ? -1 : null, quiz: {} };
+             cur: 0, file: null, tourOn: !!ann, tourIdx: ann ? -1 : null, quiz: {},
+             ids: { code: "code", fileName: "fileName", where: "where", vars: "vars" } };
   }
 
   // last element of sorted `arr` that is <= i
@@ -92,7 +93,27 @@
   }
 
   const traces = DATA.traces.map(prepare);
-  let T = traces[0];
+  // compare: a HEAD trace carrying an alignment with its base-ref twin (which gets no tab of its own)
+  for (const t of traces) {
+    const c = t.raw.compare;
+    const base = c && traces.find((x) => x.raw.name === c.base_trace);
+    if (base) {
+      const pairs = c.alignment;
+      const lastB = [], lastH = [], kOfHead = new Map();
+      let lb = 0, lh = 0;
+      pairs.forEach(([b, h], k) => {
+        if (b) lb = b - 1;
+        if (h) { lh = h - 1; if (!kOfHead.has(lh)) kOfHead.set(lh, k); }
+        lastB.push(lb);
+        lastH.push(lh);
+      });
+      t.cmp = { base, pairs, lastB, lastH, kOfHead, div: c.divergence, ref: c.base_ref, k: 0 };
+      base.isBase = true;
+      base.ids = { code: "code2", fileName: "fileName2", where: "where2", vars: "vars2" };
+    }
+  }
+  const tabs = traces.filter((t) => !t.isBase);
+  let T = tabs[0];
 
   // ------------------------------------------------------------------ helpers
   const step = (i = T.cur) => T.steps[i];
@@ -149,6 +170,10 @@
   // ------------------------------------------------------------------ navigation
   function go(i, opts = {}) {
     if (!T.steps.length) return;
+    if (T.cmp && !opts.raw) {
+      const k = T.cmp.kOfHead.get(Math.max(0, Math.min(T.steps.length - 1, i)));
+      if (k !== undefined) return cmpGo(k);
+    }
     T.cur = Math.max(0, Math.min(T.steps.length - 1, i));
     if (T.tourOn && T.ann && !opts.fromTour) {
       const k = T.stopAt.get(T.cur);
@@ -156,11 +181,18 @@
     }
     render();
   }
+  // compare mode walks the alignment: both sides advance together, one waits where the other has extra steps
+  function cmpGo(k) {
+    const c = T.cmp;
+    c.k = Math.max(0, Math.min(c.pairs.length - 1, k));
+    c.base.cur = c.lastB[c.k];
+    go(c.lastH[c.k], { raw: true, fromTour: true });
+  }
   const nav = {
-    fwd: () => go(T.cur + 1),
-    back: () => go(T.cur - 1),
-    start: () => go(0),
-    end: () => go(T.steps.length - 1),
+    fwd: () => (T.cmp ? cmpGo(T.cmp.k + 1) : go(T.cur + 1)),
+    back: () => (T.cmp ? cmpGo(T.cmp.k - 1) : go(T.cur - 1)),
+    start: () => (T.cmp ? cmpGo(0) : go(0)),
+    end: () => (T.cmp ? cmpGo(T.cmp.pairs.length - 1) : go(T.steps.length - 1)),
     over: () => {
       const d = step().depth;
       for (let j = T.cur + 1; j < T.steps.length; j++) if (T.steps[j].depth <= d) return go(j);
@@ -195,22 +227,22 @@
 
   // ------------------------------------------------------------------ rendering
   function renderTabs() {
-    const tabs = $("tabs");
-    tabs.innerHTML = "";
-    if (traces.length < 2) return;
-    traces.forEach((t, k) => {
+    const bar = $("tabs");
+    bar.innerHTML = "";
+    if (tabs.length < 2) return;
+    tabs.forEach((t, k) => {
       const b = document.createElement("button");
       b.className = "tab";
       b.setAttribute("role", "tab");
       b.setAttribute("aria-selected", String(t === T));
       b.textContent = `${k + 1}. ${t.raw.name}`;
       b.onclick = () => switchTrace(k);
-      tabs.appendChild(b);
+      bar.appendChild(b);
     });
   }
   function switchTrace(k) {
-    if (!traces[k] || traces[k] === T) return;
-    T = traces[k];
+    if (!tabs[k] || tabs[k] === T) return;
+    T = tabs[k];
     T.file = null;
     renderTabs();
     renderMeta();
@@ -230,10 +262,10 @@
 
   function renderCode() {
     const { file, line } = fileOf(T.cur);
-    const code = $("code");
+    const code = $(T.ids.code);
     if (file !== T.file) {
       T.file = file;
-      $("fileName").textContent = file || "(no source location)";
+      $(T.ids.fileName).textContent = file || "(no source location)";
       const fd = file && T.raw.files[file];
       if (!fd) {
         code.innerHTML = `<div class="banner">${file ? "Source not available for " + esc(file) : "This step has no source location."}</div>`;
@@ -313,7 +345,7 @@
         rows.push(`<div class="${cls.join(" ")}" data-var="${esc(k)}" title="${esc(v.type)}${v.truncated ? " (truncated)" : ""} — click for value history"><span class="k">${esc(k)}</span><span class="v">${val}${v.truncated ? "…" : ""}</span></div>`);
       }
     }
-    $("vars").innerHTML = rows.length ? rows.join("") : `<div class="empty">No variables recorded at this step${T.lineLevel(fileOf(T.cur).file || "") ? "" : " (file outside focus: calls only)"}.</div>`;
+    $(T.ids.vars).innerHTML = rows.length ? rows.join("") : `<div class="empty">No variables recorded at this step${T.lineLevel(fileOf(T.cur).file || "") ? "" : " (file outside focus: calls only)"}.</div>`;
   }
 
   function renderStack() {
@@ -452,6 +484,36 @@
     $("tourToggle").setAttribute("aria-pressed", "true");
   }
 
+  // ------------------------------------------------------------------ compare
+  function renderCompare() {
+    const on = !!T.cmp;
+    $("main").classList.toggle("compare", on);
+    $("basePane").hidden = !on;
+    $("vars2Panel").hidden = !on;
+    $("cmpPanel").hidden = !on;
+    $("headLabel").hidden = !on;
+    $("varsTitle").textContent = on ? "Variables (HEAD)" : "Variables";
+    if (!on) return;
+    const c = T.cmp, [b, h] = c.pairs[c.k];
+    const head = T;
+    T = c.base;
+    renderCode();
+    renderVars();
+    T = head;
+    $("baseLabel").textContent = c.ref;
+    $("basePane").classList.toggle("missing", !b);
+    $("headPane").classList.toggle("missing", !h);
+    const d = c.div;
+    let html = `<div class="progress"><span>Comparing ${esc(c.ref)} ↔ HEAD</span><span class="pair">${c.k + 1} / ${c.pairs.length}</span></div>`;
+    html += `<div class="pair">base ${b ? "#" + b : "—"} ↔ HEAD ${h ? "#" + h : "—"}</div>`;
+    if (d) {
+      const here = d.at === c.k;
+      html += `<div class="div"><strong>${here ? "This is where behaviour diverges" : "First divergence"} (${esc(d.kind)})</strong><br>${esc(d.description)}</div>`;
+      if (!here) html += `<button class="btn primary" data-cmp="${d.at}">Jump to it</button>`;
+    } else html += `<p>No divergence: both versions ran the same code with the same values.</p>`;
+    $("cmpPanel").innerHTML = html;
+  }
+
   // ------------------------------------------------------------------ timeline
   const tl = $("tl");
   let tlBase = null;
@@ -492,6 +554,7 @@
     g.fillStyle = col("--accent");
     const dot = (i, r) => { g.beginPath(); g.arc(((i + 0.5) / n) * W, 6 * dpr, r * dpr, 0, Math.PI * 2); g.fill(); };
     if (T.ann) { (T.ann.tour || []).forEach((t) => dot(t.step - 1, 3.5)); (T.ann.notes || []).forEach((t) => dot(t.step - 1, 2)); }
+    if (T.cmp && T.cmp.div) { g.fillStyle = col("--raise"); dot(T.cmp.lastH[T.cmp.div.at], 4); }
     tlBase = base;
     drawTimeline();
   }
@@ -521,8 +584,8 @@
     if (!s) { $("status").textContent = "empty trace"; return; }
     const { file, line } = fileOf(T.cur);
     const kind = s.library ? "library call" : s.kind.replace("_", " ");
-    $("status").textContent = `step ${T.cur + 1} / ${T.steps.length} · ${kind} · ${fnName(s)} · depth ${s.depth}`;
-    $("where").textContent = file ? `line ${line} · ${(T.frames.get(s.frame) || {}).fn || fnName(s)}` : "";
+    $("status").textContent = `step ${T.cur + 1} / ${T.steps.length} · ${kind} · ${fnName(s)} · depth ${s.depth}` + (T.cmp ? ` · aligned ${T.cmp.k + 1}/${T.cmp.pairs.length}` : "");
+    $(T.ids.where).textContent = file ? `line ${line} · ${(T.frames.get(s.frame) || {}).fn || fnName(s)}` : "";
   }
   function render() {
     if (!T.steps.length) {
@@ -534,17 +597,20 @@
     }
     renderCode();
     renderVars();
+    renderCompare();
     renderStack();
     renderEffects();
     renderTour();
     renderStatus();
     drawTimeline();
     if (!$("historyPanel").hidden && T.histVar) showHistory(T.histVar, T.histFn);
-    const hash = (traces.length > 1 ? `t${T.index + 1}/` : "") + `step-${T.cur + 1}`;
+    const hash = T.cmp ? `cmp-${T.cmp.k + 1}` : (tabs.length > 1 ? `t${tabs.indexOf(T) + 1}/` : "") + `step-${T.cur + 1}`;
     if (location.hash !== "#" + hash) history.replaceState(null, "", "#" + hash);
   }
 
   function fromHash() {
+    const c = /^#cmp-(\d+)$/.exec(location.hash);
+    if (c && T.cmp) { cmpGo(+c[1] - 1); return true; }
     const m = /^#(?:t(\d+)\/)?step-(\d+)$/.exec(location.hash);
     if (!m) return false;
     if (m[1]) switchTrace(+m[1] - 1);
@@ -554,8 +620,9 @@
 
   // ------------------------------------------------------------------ events
   document.addEventListener("click", (e) => {
-    const t = e.target.closest("[data-act],[data-step],[data-tour],[data-q],[data-var],.ln");
-    if (!t) return;
+    const t = e.target.closest("[data-act],[data-step],[data-tour],[data-q],[data-var],[data-cmp],.ln");
+    if (!t || t.closest("#basePane")) return;
+    if (t.dataset.cmp != null) return cmpGo(+t.dataset.cmp);
     if (t.dataset.act) return nav[t.dataset.act]();
     if (t.dataset.q != null) { T.quiz[+t.dataset.q] = +t.dataset.o; return renderTour(); }
     if (t.dataset.tour) {
@@ -623,8 +690,11 @@
   requestAnimationFrame(() => {
     drawTimelineBase();
     if (!fromHash()) {
-      if (T.ann && (T.ann.tour || []).length) tourGo(-1);
-      go(T.ann && (T.ann.tour || []).length ? T.ann.tour[0].step - 1 : 0, { fromTour: true });
+      if (T.cmp) cmpGo(T.cmp.div ? Math.max(0, T.cmp.div.at - 1) : 0); // just before the divergence
+      else {
+        if (T.ann && (T.ann.tour || []).length) tourGo(-1);
+        go(T.ann && (T.ann.tour || []).length ? T.ann.tour[0].step - 1 : 0, { fromTour: true });
+      }
     }
   });
 })();

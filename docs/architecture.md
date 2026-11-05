@@ -131,3 +131,21 @@ symlinks so the packaged crate contains them).
   JS/TS sources; the Node probe itself only understands `file:line`.
 - Runners: Jest gets `--runInBand`; Vitest gets `--pool=forks --no-file-parallelism` (the probe skips
   worker threads). Golden tests keep exact snapshots per Node major version and check structure on others.
+
+## compare (Phase 7)
+
+`visualdebug compare <base-ref> -- <cmd>` adds a temporary `git worktree` of the whole repo at the
+base ref under `.visualdebug/worktrees/` and removes it afterwards (`--keep-worktree` to inspect).
+Untracked things the command needs are shared or created: `node_modules`, `.venv`, `venv`,
+`vendor/bundle` and `.bundle` are symlinked, `storage`/`tmp`/`log` are created empty, and
+`.visualdebug/examples` is copied. The same command runs there (`<name>@base`) and in the working tree
+(`<name>`), each focused on the same changed files, with line ranges for its own version
+(`git diff -R` for the base).
+
+Alignment works on step *signatures* (kind + function + the source text of the line, so line shifts
+don't matter). A greedy walk resyncs within a 400-step lookahead, which keeps 20k-step traces cheap.
+The first divergence is either
+**control** (a step only one side has) or **data** (same step, a variable both sides have with a
+different value; timestamps and memory addresses are scrubbed first). The comparison is stored on the
+HEAD trace. `view` brings in the base trace (its sources come from `git show <base>:<path>`) and shows
+both panes side by side, stepping through the alignment and starting just before the divergence.

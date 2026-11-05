@@ -82,3 +82,71 @@ fn failing_command_keeps_exit_status_and_still_writes_trace() {
     vd().current_dir(d.path()).arg("clean").assert().success();
     assert!(!d.path().join(".visualdebug/traces").exists());
 }
+
+#[test]
+fn compare_finds_where_behaviour_diverges() {
+    if std::process::Command::new("ruby")
+        .arg("-v")
+        .output()
+        .is_err()
+        || std::process::Command::new("git")
+            .arg("--version")
+            .output()
+            .is_err()
+    {
+        return eprintln!("skip: ruby or git missing");
+    }
+    let d = project();
+    let root = d.path();
+    let git = |args: &[&str]| {
+        let ok = std::process::Command::new("git")
+            .args(args)
+            .current_dir(root)
+            .output()
+            .unwrap()
+            .status
+            .success();
+        assert!(ok, "git {args:?}");
+    };
+    let write = |body: &str| std::fs::write(root.join("app.rb"), body).unwrap();
+    write("def price(qty)\n  total = qty * 10\n  total\nend\nputs price(3)\n");
+    git(&["init", "-q", "-b", "main"]);
+    git(&["-c", "user.email=t@t", "-c", "user.name=t", "add", "-A"]);
+    git(&[
+        "-c",
+        "user.email=t@t",
+        "-c",
+        "user.name=t",
+        "commit",
+        "-q",
+        "-m",
+        "base",
+    ]);
+    write(
+        "def price(qty)\n  total = qty * 10\n  total -= 5 if qty > 2\n  total\nend\nputs price(3)\n",
+    );
+    vd().current_dir(root)
+        .args(["compare", "main", "--name", "price", "--", "ruby", "app.rb"])
+        .assert()
+        .success()
+        .stderr(
+            predicate::str::contains("first divergence (control)")
+                .and(predicate::str::contains("only on HEAD")),
+        );
+    let t: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(root.join(".visualdebug/traces/price.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(t["compare"]["base_trace"], "price@base");
+    assert!(
+        !root.join(".visualdebug/worktrees/price").exists(),
+        "worktree cleaned up"
+    );
+    let out = root.join("cmp.html");
+    vd().current_dir(root)
+        .args(["view", "price", "--no-open", "--out"])
+        .arg(&out)
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("2 trace(s)"));
+}

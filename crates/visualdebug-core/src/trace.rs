@@ -132,6 +132,9 @@ pub struct Trace {
     pub steps: Vec<Step>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<serde_json::Value>,
+    /// Set by `visualdebug compare` on the HEAD trace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub compare: Option<crate::compare::Comparison>,
 }
 
 impl Trace {

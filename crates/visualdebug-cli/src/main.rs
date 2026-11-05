@@ -1,6 +1,7 @@
 //! visualdebug: record how code executes, then scrub through it in a self-contained HTML viewer.
 //! The tool is deterministic and never calls an LLM; the Claude Code skill drives the AI parts.
 
+mod compare;
 mod doctor;
 mod probes;
 mod project;
@@ -36,6 +37,8 @@ enum Cmd {
         #[arg(long, default_value_t = 300)]
         max_lines: usize,
     },
+    /// Trace the same command on a base ref (temporary git worktree) and on HEAD; show where they diverge
+    Compare(compare::CompareArgs),
     /// Bundle trace(s) into one HTML file and open it
     View {
         /// Trace names or paths (default: most recent)
@@ -81,6 +84,7 @@ fn main() {
     let cli = Cli::parse();
     let result = match cli.cmd {
         Cmd::Run(args) => run::run(args),
+        Cmd::Compare(args) => compare::compare(args),
         Cmd::Summarize {
             trace,
             format,
@@ -133,7 +137,20 @@ fn cmd_view(names: &[String], out: Option<PathBuf>, no_open: bool) -> Result<()>
     for n in names {
         traces.push(project.load_trace(Some(n))?.1);
     }
-    let html = visualdebug_viewer::bundle(&traces, &|f| project.source(f))?;
+    // A compared trace brings its base-ref twin; that one's sources come from git.
+    let mut base_of: std::collections::HashMap<String, String> = Default::default();
+    for t in traces.clone() {
+        if let Some(c) = &t.compare {
+            base_of.insert(c.base_trace.clone(), c.base_ref.clone());
+            if !traces.iter().any(|x| x.name == c.base_trace) {
+                traces.push(project.load_trace(Some(&c.base_trace))?.1);
+            }
+        }
+    }
+    let html = visualdebug_viewer::bundle(&traces, &|t, f| match base_of.get(&t.name) {
+        Some(rev) => compare::git_source(&project, rev, f),
+        None => project.source(f),
+    })?;
     let out = match out {
         Some(p) => p,
         None => {

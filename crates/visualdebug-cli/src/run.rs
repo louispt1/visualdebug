@@ -200,21 +200,39 @@ pub fn derive_name(cmd: &[String]) -> String {
 }
 
 pub fn focus_from_diff(project: &Project, base: &str) -> Result<Focus> {
+    focus_diff(project, base, false)
+}
+
+/// The same changes, with line ranges in the base ref's version of each file.
+pub fn focus_from_diff_reversed(project: &Project, base: &str) -> Result<Focus> {
+    focus_diff(project, base, true)
+}
+
+pub fn is_source(f: &str) -> bool {
+    f.rsplit('.')
+        .next()
+        .is_some_and(|e| SOURCE_EXTS.contains(&e))
+}
+
+fn focus_diff(project: &Project, base: &str, reverse: bool) -> Result<Focus> {
     let merge_base = git(&project.root, &["merge-base", base, "HEAD"])
         .with_context(|| format!("--focus-diff {base}: is {base:?} a valid git ref here?"))?;
     // Diff merge-base against the working tree: committed + staged + unstaged changes.
-    let text = git(
-        &project.root,
-        &[
-            "diff",
-            "--unified=0",
-            "--no-color",
-            "--no-ext-diff",
-            merge_base.trim(),
-        ],
-    )?;
+    let mut args = vec!["diff", "--unified=0", "--no-color", "--no-ext-diff"];
+    if reverse {
+        args.push("-R");
+    }
+    args.push(merge_base.trim());
+    let text = git(&project.root, &args)?;
     let subdir = project.git_subdir().unwrap_or_default();
     let mut files = parse_unified_diff(&text, &subdir);
+    if reverse {
+        // Ranges are in the base version; untracked files don't exist there.
+        return Ok(Focus {
+            base: Some(base.to_string()),
+            files,
+        });
+    }
     files.retain(|f, _| project.root.join(f).is_file());
     // Untracked files count as wholly changed.
     if let Ok(untracked) = git(
@@ -411,6 +429,47 @@ pub fn run(args: RunArgs) -> Result<i32> {
         .name
         .clone()
         .unwrap_or_else(|| derive_name(&args.command));
+    let plan = Plan {
+        name: name.clone(),
+        code_root: project.root.clone(),
+        cwd: std::env::current_dir()?,
+        command: args.command.clone(),
+        lang,
+        focus,
+        start_at,
+        max_events: args.max_events,
+    };
+    let (trace, code) = execute(&project, plan)?;
+    if !trace.steps.is_empty() {
+        eprintln!("visualdebug: next: `visualdebug summarize {name}` or `visualdebug view {name}`");
+    }
+    Ok(code)
+}
+
+/// One traced execution. `code_root` is where the code lives (a worktree for `compare`); runs and
+/// traces always go to `project`'s `.visualdebug/`.
+pub struct Plan {
+    pub name: String,
+    pub code_root: std::path::PathBuf,
+    pub cwd: std::path::PathBuf,
+    pub command: Vec<String>,
+    pub lang: Option<Lang>,
+    pub focus: Focus,
+    pub start_at: Option<String>,
+    pub max_events: u32,
+}
+
+pub fn execute(project: &Project, plan: Plan) -> Result<(visualdebug_core::Trace, i32)> {
+    let Plan {
+        name,
+        code_root,
+        cwd,
+        command: original,
+        lang,
+        focus,
+        start_at,
+        max_events,
+    } = plan;
     let run_dir = project.runs_dir().join(&name);
     if run_dir.exists() {
         std::fs::remove_dir_all(&run_dir)?;
@@ -421,11 +480,11 @@ pub fn run(args: RunArgs) -> Result<i32> {
         (!focus.files.is_empty()).then(|| focus.files.keys().collect());
     let config = serde_json::json!({
         "version": 1,
-        "root": project.root,
+        "root": code_root,
         "out_dir": run_dir,
         "line_files": line_files,
         "start_at": start_at,
-        "max_events": args.max_events,
+        "max_events": max_events,
         "redact": DEFAULT_REDACT,
         "limits": { "repr": 200, "items": 10, "depth": 3 },
     });
@@ -433,7 +492,7 @@ pub fn run(args: RunArgs) -> Result<i32> {
 
     let probe_dir = probes::install()?;
     let mut env = probes::env(&probe_dir, &config_path);
-    let mut command = args.command.clone();
+    let mut command = original.clone();
     for note in adjust_for_runners(&mut command, &mut env) {
         eprintln!("visualdebug: {note}");
     }
@@ -457,6 +516,7 @@ pub fn run(args: RunArgs) -> Result<i32> {
 
     let status = Command::new(&command[0])
         .args(&command[1..])
+        .current_dir(&cwd)
         .envs(env.iter().map(|(k, v)| (k, v)))
         .status()
         .with_context(|| format!("could not start {:?}", command[0]))?;
@@ -465,7 +525,7 @@ pub fn run(args: RunArgs) -> Result<i32> {
     let info = RunInfo {
         name: name.clone(),
         language: lang.map(|l| l.name().to_string()),
-        command: args.command.clone(),
+        command: original,
         exit_code: Some(code),
         focus,
         start_at,
@@ -488,8 +548,7 @@ pub fn run(args: RunArgs) -> Result<i32> {
     );
     if trace.truncated {
         eprintln!(
-            "visualdebug: warning: hit --max-events {}; the trace is TRUNCATED. Narrow it with --start-at <entry point> or --focus-diff.",
-            args.max_events
+            "visualdebug: warning: hit --max-events {max_events}; the trace is TRUNCATED. Narrow it with --start-at <entry point> or --focus-diff."
         );
     }
     if trace.steps.is_empty() {
@@ -514,10 +573,7 @@ pub fn run(args: RunArgs) -> Result<i32> {
             report.bad_lines
         );
     }
-    if !trace.steps.is_empty() {
-        eprintln!("visualdebug: next: `visualdebug summarize {name}` or `visualdebug view {name}`");
-    }
-    Ok(code)
+    Ok((trace, code))
 }
 
 fn empty_hint(trace: &visualdebug_core::Trace, lang: Option<Lang>) -> String {

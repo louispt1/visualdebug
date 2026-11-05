@@ -19,14 +19,20 @@
   </header>
   <div id="timeline" class="timeline" role="slider" tabindex="0" aria-label="Execution timeline. Click or drag to scrub."
        aria-valuemin="1" aria-valuenow="1"><canvas id="tl"></canvas></div>
-  <main class="main">
-    <section class="code-pane" aria-label="Source code">
-      <div class="pane-head"><span id="fileName" class="file-name"></span><span id="where" class="where"></span></div>
+  <main class="main" id="main">
+    <section class="code-pane" id="basePane" hidden aria-label="Base version source">
+      <div class="pane-head"><span id="baseLabel" class="side-label">base</span><span id="fileName2" class="file-name"></span><span id="where2" class="where"></span></div>
+      <div id="code2" class="code"></div>
+    </section>
+    <section class="code-pane" id="headPane" aria-label="Source code">
+      <div class="pane-head"><span id="headLabel" class="side-label" hidden>HEAD</span><span id="fileName" class="file-name"></span><span id="where" class="where"></span></div>
       <div id="code" class="code" role="list" aria-label="Source lines. Click a line to jump to its next execution; Shift-click for the previous."></div>
     </section>
     <aside class="side">
+      <section id="cmpPanel" class="panel tour" hidden aria-live="polite"></section>
       <section id="tour" class="panel tour" hidden aria-live="polite"></section>
-      <section class="panel"><h2>Variables</h2><div id="vars" class="vars"></div></section>
+      <section class="panel"><h2 id="varsTitle">Variables</h2><div id="vars" class="vars"></div></section>
+      <section id="vars2Panel" class="panel" hidden><h2>Variables (base)</h2><div id="vars2" class="vars"></div></section>
       <section id="historyPanel" class="panel" hidden>
         <h2><span id="historyTitle"></span> <button id="historyClose" class="btn tiny" aria-label="Close value history">×</button></h2>
         <div id="history" class="list"></div>
