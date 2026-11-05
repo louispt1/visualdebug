@@ -114,3 +114,54 @@ fn python_pytest_auto_test() {
         snap!(py_snap(&py, "python_pytest_start_at"), s);
     }
 }
+
+/// V8 versions differ by a pause or two (e.g. loop heads), so exact snapshots are kept per Node major
+/// version; on a version without one, the summary must still contain `must`.
+fn node_check(name: &str, text: String, must: &[&str]) {
+    let out = Command::new("node").arg("-p").arg("process.versions.node.split('.')[0]").output().unwrap();
+    let major = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    let snap_name = format!("{name}_node{major}");
+    let file = Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("tests/snapshots/fixtures__{snap_name}.snap"));
+    for m in must {
+        assert!(text.contains(m), "{name}: summary lacks {m:?}:\n{text}");
+    }
+    if file.exists() || std::env::var("VISUALDEBUG_NEW_NODE_SNAPSHOTS").is_ok() {
+        snap!(snap_name, text);
+    } else {
+        eprintln!("note: no snapshot for Node {major}; checked structure only");
+    }
+}
+
+fn npm_installed(fixture: &str) -> bool {
+    root().join("fixtures").join(fixture).join("node_modules").is_dir()
+}
+
+#[test]
+fn node_plain() {
+    if !have("node", "-v") {
+        return eprintln!("skip: node not installed");
+    }
+    if let Some(s) = trace("node-plain", "plain", &["--focus", "src/pricing.js"], &["node", "src/main.js"]) {
+        node_check("node_plain", s, &["→ priceOrder", "[REDACTED]", "loop ×2", "← priceOrder returned 108"]);
+    }
+}
+
+#[test]
+fn node_jest() {
+    if !have("node", "-v") || !npm_installed("node-jest") {
+        return eprintln!("skip: node or fixtures/node-jest/node_modules missing (npm ci)");
+    }
+    if let Some(s) = trace("node-jest", "jest", &["--focus", "src/pricing.js"], &["npx", "jest"]) {
+        node_check("node_jest", s, &["→ priceOrder", "loop ×2", "← priceOrder returned 108"]);
+    }
+}
+
+#[test]
+fn node_vitest_ts() {
+    if !have("node", "-v") || !npm_installed("node-vitest-ts") {
+        return eprintln!("skip: node or fixtures/node-vitest-ts/node_modules missing (npm ci)");
+    }
+    if let Some(s) = trace("node-vitest-ts", "vitest", &["--start-at", "priceOrder"], &["npx", "vitest", "run"]) {
+        node_check("node_vitest_ts", s, &["pricing.ts:19", "→ priceOrder", "pricing.ts:25", "← priceOrder returned"]);
+    }
+}

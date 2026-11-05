@@ -103,3 +103,31 @@ symlinks so the packaged crate contains them).
   a window opens and to new ones via `connection_created`.
 - Library calls skip builtins (`len`, `dict.get`, ...) and generated code (`<string>`, e.g. dataclass
   `__init__`), and pytest's `@py_assert*` temporaries are hidden.
+
+## Node probe notes
+
+- `--require visualdebug_probe.cjs` starts an inspector worker (`connectToMainThread`) and blocks in
+  `Atomics.wait` until it is ready (~25ms). The worker keeps itself alive with a timer: a pending
+  inspector call does not, and without it the worker exits mid-handshake (the Phase 0 "deadlock").
+- Recording: breakpoints only *open* a window; `Debugger.stepInto` drives it, with node internals and
+  `node_modules` blackboxed. Every pause is answered (step or resume) even if recording fails.
+- Frame identity: V8 call frame ids change between pauses, so the project-frame stack is aligned
+  between pauses by function location + name; a `returnValue` pause pops the frame.
+- Breakpoint placement: untransformed files get `setBreakpointByUrl` (exact, resolved at compile time).
+  Transformed files (Vitest, tsx, Jest/babel) get breakpoints by scriptId at the first breakable
+  generated location of each wanted original line (`Debugger.getPossibleBreakpoints` + Node's
+  `module.SourceMap`), from a `beforeScriptWithSourceMapExecution` pause, or straight from
+  `scriptParsed` for `compileFunction` scripts (Jest), which races only module top-level code.
+  By-URL hits inside a transformed copy are ignored.
+- Module top-level code (CJS wrapper, ESM, Vitest's module function) never opens a window.
+- Locals: scopes up to the function's own `local` scope (closures, module and global are context);
+  `this` only for class instances. Redaction is by name, plus by string value for redacted strings
+  (no object identity in Node).
+- Exceptions pause only while a window is open (`setPauseOnExceptions: all`, reset after).
+- On exit the main thread asks the worker to flush and disconnect, so Node doesn't print
+  "Waiting for the debugger to disconnect...".
+- No library-call events: blackboxed code is invisible to stepping.
+- `--start-at` names (`priceOrder`, `Cart.total`) are resolved to `file:line` by the CLI by scanning
+  JS/TS sources; the Node probe itself only understands `file:line`.
+- Runners: Jest gets `--runInBand`; Vitest gets `--pool=forks --no-file-parallelism` (the probe skips
+  worker threads). Golden tests keep exact snapshots per Node major version and check structure on others.

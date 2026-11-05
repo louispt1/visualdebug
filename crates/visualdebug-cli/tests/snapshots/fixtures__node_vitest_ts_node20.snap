@@ -1,0 +1,14 @@
+---
+source: crates/visualdebug-cli/tests/fixtures.rs
+assertion_line: 129
+expression: text
+---
+trace: golden-vitest  (15 steps, 7 rows shown; exit 0; node)
+command: npx vitest run
+#1         pricing.ts:19            → priceOrder   ⟶ order={tier: "gold", items: Array(2)}
+#2         pricing.ts:20            │ let total = 0;   ⟶ discount: undefined → 0.1
+#3         pricing.ts:21            │ for (const item of order.items) {   ⟶ item: (new) undefined, total: undefined → 0
+#4-#12     pricing.ts:21-22         loop ×2  │ for (const item of order.items) {   ⟶ total: 0 → 120
+#13        pricing.ts:24            │ await Promise.resolve();
+#14        pricing.ts:25            │ return discount ? Math.round(total * (1 - discount) * 100) /…
+#15        pricing.ts:25            ← priceOrder returned Promise

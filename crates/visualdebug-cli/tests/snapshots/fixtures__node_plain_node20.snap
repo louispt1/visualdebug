@@ -1,0 +1,18 @@
+---
+source: crates/visualdebug-cli/tests/fixtures.rs
+assertion_line: 129
+expression: text
+---
+trace: golden-plain  (21 steps, 10 rows shown; exit 0; node)
+command: node src/main.js
+focus: src/pricing.js   (* = changed line)
+#1         pricing.js:8             → priceOrder   ⟶ order={tier: "gold", items: Array(2)}, apiToken=[REDACTED]
+#2         pricing.js:9             │ let total = 0;   ⟶ discount: undefined → 0.1
+#3         pricing.js:10            │ for (const item of order.items) {   ⟶ item: (new) undefined, total: undefined → 0
+#4-#12     pricing.js:10-11         loop ×2  │ for (const item of order.items) {   ⟶ total: 0 → 120
+#13        pricing.js:13            │ const apiToken = "s3cret";
+#14        pricing.js:14            │ const summary = order.items.map((i) => i.sku).join(",");
+#15-#18    pricing.js:14              loop ×2 (anonymous)
+#19        pricing.js:14            │ const summary = order.items.map((i) => i.sku).join(",");
+#20        pricing.js:15            │ return discount ? Math.round(total * (1 - discount) * 100) /…   ⟶ summary: undefined → "A,B"
+#21        pricing.js:15            ← priceOrder returned 108

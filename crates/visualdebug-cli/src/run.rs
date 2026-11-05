@@ -154,6 +154,65 @@ pub fn focus_from_diff(project: &Project, base: &str) -> Result<Focus> {
     Ok(Focus { base: Some(base.to_string()), files })
 }
 
+fn is_file_line(s: &str) -> bool {
+    s.rsplit_once(':').is_some_and(|(f, l)| !f.is_empty() && !l.is_empty() && l.chars().all(|c| c.is_ascii_digit()))
+}
+
+const JS_EXTS: &[&str] = &["js", "cjs", "mjs", "ts", "mts", "cts", "jsx", "tsx"];
+
+/// `name`, `Class.method` or `Class#method` -> `file:line` of its definition, by scanning sources.
+pub fn resolve_js_name(root: &std::path::Path, target: &str) -> Option<String> {
+    let (class, name) = match target.rsplit_once(['.', '#']) {
+        Some((c, n)) => (Some(c.rsplit(['.', '#']).next().unwrap_or(c)), n),
+        None => (None, target),
+    };
+    let defines = |line: &str| {
+        let t = line.trim_start();
+        let t = t.strip_prefix("export ").unwrap_or(t);
+        let t = t.strip_prefix("default ").unwrap_or(t);
+        let t = t.strip_prefix("async ").unwrap_or(t);
+        let after = |p: &str| t.strip_prefix(p).and_then(|r| r.strip_prefix(name));
+        let next_is = |r: Option<&str>, f: &dyn Fn(&str) -> bool| r.is_some_and(|r| f(r.trim_start()));
+        next_is(after("function "), &|r| r.starts_with('(') || r.starts_with('<'))
+            || next_is(after("function* "), &|r| r.starts_with('('))
+            || ["const ", "let ", "var "].iter().any(|k| next_is(after(k), &|r| r.starts_with('=') || r.starts_with(':')))
+            || ["", "static ", "public ", "private ", "protected ", "get ", "set "].iter().any(|k| {
+                next_is(after(k), &|r| (r.starts_with('(') || r.starts_with('<')) && line.trim_end().ends_with('{'))
+            })
+    };
+    let mut stack = vec![root.to_path_buf()];
+    let mut hits: Vec<(bool, String)> = Vec::new();
+    while let Some(dir) = stack.pop() {
+        let Ok(rd) = std::fs::read_dir(&dir) else { continue };
+        for e in rd.flatten() {
+            let p = e.path();
+            let fname = e.file_name().to_string_lossy().into_owned();
+            if p.is_dir() {
+                if !fname.starts_with('.') && !matches!(fname.as_str(), "node_modules" | "dist" | "build" | "coverage" | "out") {
+                    stack.push(p);
+                }
+                continue;
+            }
+            if !fname.rsplit('.').next().is_some_and(|e| JS_EXTS.contains(&e)) || fname.ends_with(".d.ts") {
+                continue;
+            }
+            let Ok(text) = std::fs::read_to_string(&p) else { continue };
+            let in_class = class.is_none_or(|c| text.contains(&format!("class {c}")));
+            for (i, line) in text.lines().enumerate() {
+                if defines(line) {
+                    let rel = p.strip_prefix(root).unwrap_or(&p).to_string_lossy().into_owned();
+                    let is_test = rel.contains(".test.") || rel.contains(".spec.") || rel.contains("__tests__");
+                    // break on the first body line; one-line arrows have their body on the same line
+                    let body = if line.trim_end().ends_with('{') { i + 2 } else { i + 1 };
+                    hits.push((!in_class || is_test, format!("{rel}:{body}")));
+                }
+            }
+        }
+    }
+    hits.sort();
+    hits.into_iter().next().map(|(_, h)| h)
+}
+
 const SOURCE_EXTS: &[&str] = &["rb", "py", "js", "cjs", "mjs", "ts", "mts", "cts", "jsx", "tsx", "rake", "ru"];
 
 pub fn run(args: RunArgs) -> Result<i32> {
@@ -180,6 +239,13 @@ pub fn run(args: RunArgs) -> Result<i32> {
     }
 
     let start_at = match (&args.start_at, lang, is_test) {
+        // The Node probe breaks on lines; resolve function names here.
+        (Some(s), Some(Lang::Node), _) if !is_file_line(s) => {
+            let found = resolve_js_name(&project.root, s)
+                .with_context(|| format!("--start-at {s}: no function, method or arrow named that in the project's JS/TS files; pass file:line instead"))?;
+            eprintln!("visualdebug: --start-at {s} -> {found}");
+            Some(found)
+        }
         (Some(s), _, _) => Some(s.clone()),
         (None, Some(Lang::Ruby | Lang::Python), true) => Some("auto:test".to_string()),
         _ => None,
@@ -326,6 +392,23 @@ mod tests {
         assert_eq!(derive_name(&v("pytest tests/test_pricing.py::test_bulk_discount")), "test_pricing-test_bulk_discount");
         assert_eq!(derive_name(&v("npx vitest run src/pricing.test.ts")), "pricing.test");
         assert_eq!(derive_name(&v("make check")), "make-check");
+    }
+
+    #[test]
+    fn resolves_js_names() {
+        let d = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(d.path().join("src")).unwrap();
+        std::fs::write(
+            d.path().join("src/a.ts"),
+            "export async function priceOrder(o: Order): Promise<number> {\n  return 1;\n}\nconst sub = (x) => x;\nclass Cart {\n  total() {\n    return 2;\n  }\n}\n",
+        )
+        .unwrap();
+        let r = d.path();
+        assert_eq!(resolve_js_name(r, "priceOrder").as_deref(), Some("src/a.ts:2"));
+        assert_eq!(resolve_js_name(r, "sub").as_deref(), Some("src/a.ts:4"));
+        assert_eq!(resolve_js_name(r, "Cart.total").as_deref(), Some("src/a.ts:7"));
+        assert_eq!(resolve_js_name(r, "nope"), None);
+        assert!(is_file_line("src/a.ts:12") && !is_file_line("Cart.total"));
     }
 
     #[test]
