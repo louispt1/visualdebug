@@ -1,0 +1,15 @@
+---
+source: crates/visualdebug-cli/tests/fixtures.rs
+assertion_line: 114
+expression: s
+---
+trace: golden-pytest-start-at  (8 steps, 8 rows shown; exit 0; python)
+command: python -m pytest -q tests/test_pricing.py::test_guest
+#1         pricing.py:33            → pricing.raise_if_negative   ⟶ value=-5.0
+#2         pricing.py:34            │ try:
+#3         pricing.py:35            │ if value < 0:
+#4         pricing.py:36            │ raise ValueError("negative")
+#5         pricing.py:36            !! raise ValueError: negative
+#6         pricing.py:37            │ except ValueError:
+#7         pricing.py:38            │ return 0
+#8         pricing.py:38            ← pricing.raise_if_negative returned 0

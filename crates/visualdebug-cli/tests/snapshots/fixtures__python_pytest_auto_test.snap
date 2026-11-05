@@ -1,0 +1,55 @@
+---
+source: crates/visualdebug-cli/tests/fixtures.rs
+assertion_line: 111
+expression: s
+---
+trace: golden-pytest  (58 steps, 48 rows shown; exit 0; python)
+command: python -m pytest -q tests/test_pricing.py
+#1         test_pricing.py:5        → tests.test_pricing.test_bulk_discount
+#2         test_pricing.py:6        │ items = [LineItem("A", 2, 50.0), LineItem("B", 1, 20.0)]
+#3         test_pricing.py:7        │ payload = json.dumps({"n": len(items)})   ⟶ items: (new) [LineItem(sku='A', quantity=2, unit_pric…
+#4         test_pricing.py:7          → json.dumps (library)
+#5         test_pricing.py:8        │ assert Pricer("gold", items).total() == 108.0   ⟶ payload: (new) '{"n": 2}'
+#6         pricing.py:17              → pricing.Pricer.__init__   ⟶ self=<pricing.Pricer>, tier='gold', items=[LineItem(sku='A', quantity=2, unit_pric…
+#7         pricing.py:18              │ self.tier = tier
+#8         pricing.py:19              │ self.items = items   ⟶ self: <pricing.Pricer> → <pricing.Pricer tier='gold'> (mutated)
+#9         pricing.py:20              │ self.api_token = api_token   ⟶ self: <pricing.Pricer tier='gold'> → <pricing.Pricer tier='gold', i… (mutated)
+#10        pricing.py:20              ← pricing.Pricer.__init__ returned None
+#11        pricing.py:22              → pricing.Pricer.total   ⟶ self=<pricing.Pricer tier='gold', items=[Line…
+#12        pricing.py:23              │ discount = TIER_DISCOUNTS.get(self.tier)
+#13        pricing.py:24              │ subtotal = 0   ⟶ discount: (new) 0.1
+#14-#24    pricing.py:25-26           loop ×2  │ for item in self.items:
+#25        pricing.py:27              │ if discount is None:
+#26        pricing.py:30              │ return round(subtotal * (1 - discount), 2)
+#27        pricing.py:30              ← pricing.Pricer.total returned 108.0
+#28        test_pricing.py:9        │ assert payload
+#29        test_pricing.py:9        ← tests.test_pricing.test_bulk_discount returned None
+#30        test_pricing.py:12       → tests.test_pricing.test_guest
+#31        test_pricing.py:13       │ assert Pricer(None, [LineItem("A", -1, 5.0)]).total() == -5.…
+#32        pricing.py:17              → pricing.Pricer.__init__   ⟶ self=<pricing.Pricer>, items=[LineItem(sku='A', quantity=-1, unit_pri…, api_token=[REDACTED]
+#33        pricing.py:18              │ self.tier = tier
+#34        pricing.py:19              │ self.items = items   ⟶ self: <pricing.Pricer> → <pricing.Pricer tier=None> (mutated)
+#35        pricing.py:20              │ self.api_token = api_token   ⟶ self: <pricing.Pricer tier=None> → <pricing.Pricer tier=None, ite… (mutated)
+#36        pricing.py:20              ← pricing.Pricer.__init__ returned None
+#37        pricing.py:22              → pricing.Pricer.total   ⟶ self=<pricing.Pricer tier=None, items=[LineIt…
+#38        pricing.py:23              │ discount = TIER_DISCOUNTS.get(self.tier)
+#39        pricing.py:24              │ subtotal = 0   ⟶ discount: (new) None
+#40        pricing.py:25              │ for item in self.items:   ⟶ subtotal: (new) 0
+#41        pricing.py:26              │ subtotal += item.subtotal()   ⟶ item: (new) LineItem(sku='A', quantity=-1, unit_pric…
+#42        pricing.py:12                → pricing.LineItem.subtotal   ⟶ self=LineItem(sku='A', quantity=-1, unit_pric…
+#43        pricing.py:13                │ return self.quantity * self.unit_price
+#44        pricing.py:13                ← pricing.LineItem.subtotal returned -5.0
+#45        pricing.py:25              │ for item in self.items:   ⟶ subtotal: 0 → -5.0
+#46        pricing.py:27              │ if discount is None:
+#47        pricing.py:28              │ raise_if_negative(subtotal)
+#48        pricing.py:33                → pricing.raise_if_negative   ⟶ value=-5.0
+#49        pricing.py:34                │ try:
+#50        pricing.py:35                │ if value < 0:
+#51        pricing.py:36                │ raise ValueError("negative")
+#52        pricing.py:36                !! raise ValueError: negative
+#53        pricing.py:37                │ except ValueError:
+#54        pricing.py:38                │ return 0
+#55        pricing.py:38                ← pricing.raise_if_negative returned 0
+#56        pricing.py:29              │ return subtotal
+#57        pricing.py:29              ← pricing.Pricer.total returned -5.0
+#58        test_pricing.py:13       ← tests.test_pricing.test_guest returned None

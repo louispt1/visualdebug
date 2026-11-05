@@ -83,3 +83,23 @@ symlinks so the packaged crate contains them).
 - `auto:test`: RSpec gets an `around(:example)` hook (installed when `Runner#run_specs` is called) that
   targets the example block; Minitest/Rails tests arm the test method inside `Minitest::Test#run`.
 - Serialization never calls `Relation#inspect`, association readers, or library-defined `#inspect`.
+
+## Python probe notes
+
+- `sitecustomize.py` (probe dir prepended to `PYTHONPATH`) installs the probe, then re-imports
+  `sitecustomize` with its own dir removed from `sys.path`, so a project's own sitecustomize still runs.
+- `sys.monitoring` (3.12+): before a window only `PY_START` is on, and every non-trigger code location
+  returns `DISABLE`, so code outside the window costs nothing. Opening a window calls
+  `restart_events()`, which also re-arms other tools' disabled locations (coverage re-disables its own).
+- `sys.settrace` (3.11): the global tracer still runs once per call before the window (~6x on tight
+  loops). It *does* see library return values; `sys.monitoring` does not (deviation 8).
+- Generators and coroutines keep one frame id across yield/resume (`yielded: true` on the suspension).
+- Recorded frames: functions, plus the main script's top level. Class bodies and imported modules' top
+  level are skipped (same as Ruby).
+- `__repr__` is called only when the class that *defines* it is builtin, stdlib or project code. So a
+  Django `Model` (whose `__repr__` calls a possibly lazy-loading `__str__`) is rendered from `__dict__`,
+  minus `_`-prefixed library internals. QuerySets show `loaded`/`unloaded` from `_result_cache`.
+- Django SQL is captured with a `connection.execute_wrappers` entry, added to existing connections when
+  a window opens and to new ones via `connection_created`.
+- Library calls skip builtins (`len`, `dict.get`, ...) and generated code (`<string>`, e.g. dataclass
+  `__init__`), and pytest's `@py_assert*` temporaries are hidden.

@@ -1,0 +1,6 @@
+[project]
+name = "python-pytest"
+version = "0"
+
+[tool.pytest.ini_options]
+addopts = "-p no:cacheprovider"

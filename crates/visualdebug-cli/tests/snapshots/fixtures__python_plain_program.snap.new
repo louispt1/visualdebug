@@ -1,0 +1,29 @@
+---
+source: crates/visualdebug-cli/tests/fixtures.rs
+assertion_line: 99
+expression: s
+---
+trace: golden-program  (62 steps, 22 rows shown; exit 0; python)
+command: python3 shop.py
+#1         shop.py:1                → shop
+#2         shop.py:1                │ from decimal import Decimal
+#3         shop.py:4                │ class Cart:
+#4         shop.py:21               │ def countdown(n):
+#5         shop.py:27               │ def parse(text):
+#6         shop.py:34               │ cart = Cart("ada", session_token="tok-123").add("A", 2, "9.9…
+#7         shop.py:5                  → shop.Cart.__init__   ⟶ self=<__main__.Cart>, owner='ada', session_token=[REDACTED]
+#8         shop.py:6                  │ self.owner = owner
+#9         shop.py:7                  │ self.session_token = session_token   ⟶ self: <__main__.Cart> → <__main__.Cart owner='ada'> (mutated)
+#10        shop.py:8                  │ self.items = []   ⟶ self: <__main__.Cart owner='ada'> → <__main__.Cart owner='ada', se… (mutated)
+#11        shop.py:8                  ← shop.Cart.__init__ returned None
+#12-#21    shop.py:10-12              loop ×2 shop.Cart.add
+#22        shop.py:35               │ print(cart.total(), list(countdown(3)), parse("x"), parse("4…   ⟶ cart: (new) <__main__.Cart owner='ada', session_toke…
+#23        shop.py:14                 → shop.Cart.total   ⟶ self=<__main__.Cart owner='ada', session_toke…
+#24        shop.py:15                 │ total = Decimal("0")
+#25        shop.py:15                   → decimal.Decimal (library)
+#26-#30    shop.py:16-17              loop ×2  │ for item in self.items:
+#31        shop.py:18                 │ return total
+#32        shop.py:18                 ← shop.Cart.total returned Decimal('24.98')
+#33-#50    shop.py:21-24              loop ×4 shop.countdown
+#51-#61    shop.py:27-31              loop ×2 shop.parse
+#62        shop.py:35               ← shop returned None

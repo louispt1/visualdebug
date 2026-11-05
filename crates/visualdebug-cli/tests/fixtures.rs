@@ -38,7 +38,7 @@ macro_rules! snap {
             (r"0x[0-9a-f]{6,16}", "0xADDR"),
             (r"\d{4}-\d\d-\d\d[ T]\d\d:\d\d:\d\d(\.\d+)?( UTC)?( [+-]\d\d:?\d\d)?", "[TIME]"),
             (r"\(\d+\.\dms\)", "(N.Nms)"),
-            (r"(?m)…$", "…"),
+            (r"(?m)^command: \S*/(python[0-9.]*)", "command: $1"),
         ]}, { insta::assert_snapshot!($name, $text) });
     };
 }
@@ -76,5 +76,41 @@ fn rails_request_spec() {
     }
     if let Some(s) = trace("rails-app", "start-at", &["--start-at", "Pricer#call"], &["bundle", "exec", "rspec", "spec/services/pricer_spec.rb"]) {
         snap!("rails_pricer_start_at", s);
+    }
+}
+
+fn python() -> String {
+    std::env::var("VISUALDEBUG_TEST_PYTHON").unwrap_or_else(|_| "python3".into())
+}
+
+/// Python < 3.12 uses the settrace backend, which legitimately sees less (no C calls): own snapshots.
+fn py_snap(py: &str, name: &str) -> String {
+    let out = Command::new(py).args(["-c", "import sys; print(sys.version_info >= (3, 12))"]).output().unwrap();
+    if String::from_utf8_lossy(&out.stdout).trim() == "True" { name.to_string() } else { format!("{name}_settrace") }
+}
+
+#[test]
+fn python_plain_program() {
+    let py = python();
+    if !have(&py, "-V") {
+        return eprintln!("skip: {py} not installed");
+    }
+    if let Some(s) = trace("python-plain", "program", &[], &[&py, "shop.py"]) {
+        snap!(py_snap(&py, "python_plain_program"), s);
+    }
+}
+
+#[test]
+fn python_pytest_auto_test() {
+    let py = python();
+    let ok = Command::new(&py).args(["-m", "pytest", "--version"]).output().is_ok_and(|o| o.status.success());
+    if !ok {
+        return eprintln!("skip: pytest not available for {py} (set VISUALDEBUG_TEST_PYTHON)");
+    }
+    if let Some(s) = trace("python-pytest", "pytest", &[], &[&py, "-m", "pytest", "-q", "tests/test_pricing.py"]) {
+        snap!(py_snap(&py, "python_pytest_auto_test"), s);
+    }
+    if let Some(s) = trace("python-pytest", "pytest-start-at", &["--start-at", "pricing.raise_if_negative"], &[&py, "-m", "pytest", "-q", "tests/test_pricing.py::test_guest"]) {
+        snap!(py_snap(&py, "python_pytest_start_at"), s);
     }
 }
