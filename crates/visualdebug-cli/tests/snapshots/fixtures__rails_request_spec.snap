@@ -1,0 +1,78 @@
+---
+source: crates/visualdebug-cli/tests/fixtures.rs
+assertion_line: 75
+expression: s
+---
+trace: golden-request  (70 steps, 70 rows shown; exit 0; ruby)
+command: bundle exec rspec spec/requests/orders_spec.rb
+focus: app/controllers/orders_controller.rb; app/services/pricer.rb   (* = changed line)
+#1         orders_spec.rb:4         → example: POST /orders/:id/price prices the order
+#2         orders_spec.rb:5         │ customer = Customer.create!(name: "Ada", tier: "gold")
+#3         orders_spec.rb:5           → ActiveRecord::Persistence::ClassMethods#create! (library) returned #<Customer id: 1, name: "Ada", tier: "gold", creat…
+#4         orders_spec.rb:5         SQL  SAVEPOINT active_record_1  (N.Nms)
+#5         orders_spec.rb:5         SQL  INSERT INTO "customers" ("name", "tier", "created_at", "updated_at") VALUES (?, ?, ?, ?) RETURNING "…  (N.Nms)
+#6         orders_spec.rb:5         SQL  RELEASE SAVEPOINT active_record_1  (N.Nms)
+#7         orders_spec.rb:6         │ order = Order.create!(customer: customer, total: 0)   ⟶ customer: nil → #<Customer id: 1, name: "Ada",…
+#8         orders_spec.rb:6           → ActiveRecord::Persistence::ClassMethods#create! (library) returned #<Order id: 1, customer_id: 1, total: 0.0, created…
+#9         orders_spec.rb:6         SQL  SAVEPOINT active_record_1  (N.Nms)
+#10        orders_spec.rb:6         SQL  INSERT INTO "orders" ("customer_id", "total", "created_at", "updated_at") VALUES (?, ?, ?, ?) RETURN…  (N.Nms)
+#11        orders_spec.rb:6         SQL  RELEASE SAVEPOINT active_record_1  (N.Nms)
+#12        orders_spec.rb:7         │ order.line_items.create!(sku: "A", quantity: 2, unit_price: …   ⟶ order: nil → #<Order id: 1, customer_id: 1,…
+#13        orders_spec.rb:7           → Order::GeneratedAssociationMethods#line_items (library) returned #<ActiveRecord::Associations::CollectionProxy Line…
+#14        orders_spec.rb:7           → ActiveRecord::Associations::CollectionProxy#create! (library) returned #<LineItem id: 1, order_id: 1, sku: "A", quantity:…
+#15        orders_spec.rb:7         SQL  SAVEPOINT active_record_1  (N.Nms)
+#16        orders_spec.rb:7         SQL  INSERT INTO "line_items" ("order_id", "sku", "quantity", "unit_price", "created_at", "updated_at") V…  (N.Nms)
+#17        orders_spec.rb:7         SQL  RELEASE SAVEPOINT active_record_1  (N.Nms)
+#18        orders_spec.rb:9         │ post "/orders/#{order.id}/price"
+#19        orders_spec.rb:9           → ActiveRecord::AttributeMethods::PrimaryKey#id (library) returned 1
+#20        orders_spec.rb:9           → ActionDispatch::Integration::Runner#post (library) returned 200
+#21        routes.rb:1                → block in routes.rb
+#22        routes.rb:1                  → ActionDispatch::Routing::Mapper::HttpHelpers#post (library) returned #<ActionDispatch::Routing::Mapper @set=#<Rails::En…
+#23        routes.rb:3                ← block in routes.rb returned #<ActionDispatch::Routing::Mapper @set=#<Rails::Engine::Lazy…
+#24        orders_controller.rb:2     → OrdersController#price
+#25        orders_controller.rb:3     │ order = Order.find(params[:id])
+#26        orders_controller.rb:3       → ActionController::StrongParameters#params (library) returned #<ActionController::Parameters @parameters={"contr…
+#27        orders_controller.rb:3       → ActionController::Parameters#[] (library) returned "1"
+#28        orders_controller.rb:3       → ActiveRecord::Core::ClassMethods#find (library) returned #<Order id: 1, customer_id: 1, total: 0.0, created…
+#29        orders_controller.rb:3     SQL  SELECT "orders".* FROM "orders" WHERE "orders"."id" = ? LIMIT ?  (N.Nms)
+#30        orders_controller.rb:4     │ total = Pricer.new(order).call   ⟶ order: nil → #<Order id: 1, customer_id: 1,…
+#31        pricer.rb:4                  → Pricer#initialize   ⟶ order=#<Order id: 1, customer_id: 1, total: 0.…
+#32        pricer.rb:5                  │ @order = order
+#33        pricer.rb:6                  ← Pricer#initialize returned #<Order id: 1, customer_id: 1, total: 0.0, created_at: 2026-…
+#34        pricer.rb:8                  → Pricer#call
+#35        pricer.rb:9                  │ discount = TIER_DISCOUNTS[@order.customer.tier]
+#36        pricer.rb:9                    → Order::GeneratedAssociationMethods#customer (library) returned #<Customer id: 1, name: "Ada", tier: "gold", creat…
+#37        pricer.rb:9                  SQL  SELECT "customers".* FROM "customers" WHERE "customers"."id" = ? LIMIT ?  (N.Nms)
+#38        pricer.rb:9                    → Customer::GeneratedAttributeMethods#tier (library) returned "gold"
+#39        pricer.rb:10                 │ subtotal = 0   ⟶ discount: nil → 0.1
+#40        pricer.rb:11                 │ @order.line_items.each do |item|   ⟶ subtotal: nil → 0
+#41        pricer.rb:11                   → Order::GeneratedAssociationMethods#line_items (library) returned #<ActiveRecord::Associations::CollectionProxy Line…
+#42        pricer.rb:11                   → ActiveRecord::Delegation#each (library) returned [#<LineItem id: 1, order_id: 1, sku: "A", quantity…
+#43        pricer.rb:11                 SQL  SELECT "line_items".* FROM "line_items" WHERE "line_items"."order_id" = ?  (N.Nms)
+#44        pricer.rb:11                   → block in Pricer#call   ⟶ item=#<LineItem id: 1, order_id: 1, sku: "A",…, discount=0.1
+#45        pricer.rb:12                   │ subtotal += item.subtotal
+#46        line_item.rb:4                   → LineItem#subtotal
+#47        line_item.rb:4                     → LineItem::GeneratedAttributeMethods#quantity (library) returned 2
+#48        line_item.rb:4                     → LineItem::GeneratedAttributeMethods#unit_price (library) returned 50.0
+#49        line_item.rb:6                   ← LineItem#subtotal returned 100.0
+#50        pricer.rb:13                   ← block in Pricer#call returned 100.0
+#51        pricer.rb:14                 │ total = discount ? subtotal * (1 - discount) : subtotal   ⟶ subtotal: 0 → 100.0
+#52        pricer.rb:15                 │ @order.update!(total: total)   ⟶ total: nil → 90.0
+#53        pricer.rb:15                   → ActiveRecord::Persistence#update! (library) returned true
+#54        pricer.rb:15                 SQL  SAVEPOINT active_record_1  (N.Nms)
+#55        pricer.rb:15                 SQL  UPDATE "orders" SET "total" = ?, "updated_at" = ? WHERE "orders"."id" = ?  (N.Nms)
+#56        pricer.rb:15                 SQL  RELEASE SAVEPOINT active_record_1  (N.Nms)
+#57        pricer.rb:16                 │ total   ⟶ @order: #<Order id: 1, customer_id: 1,… → #<Order id: 1, customer_id: 1,… (mutated)
+#58        pricer.rb:17                 ← Pricer#call returned 90.0
+#59        orders_controller.rb:5     │ render json: { id: order.id, total: total.to_f }   ⟶ order: #<Order id: 1, customer_id: 1,… → #<Order id: 1, customer_id: 1,… (mutated), total: nil → 90.0
+#60        orders_controller.rb:5       → ActiveRecord::AttributeMethods::PrimaryKey#id (library) returned 1
+#61        orders_controller.rb:5       → ActionController::Instrumentation#render (library) returned "{\"id\":1,\"total\":90.0}"
+#62        orders_controller.rb:6     ← OrdersController#price returned "{\"id\":1,\"total\":90.0}"
+#63        orders_spec.rb:11        │ expect(response.parsed_body["total"]).to eq(90.0)
+#64        orders_spec.rb:11          → ActionDispatch::Integration::Runner#method_missing (library) returned #<ActionDispatch::TestResponse @mon_data=#<Monitor…
+#65        orders_spec.rb:11          → ActionDispatch::TestResponse#parsed_body (library) returned {"id" => 1, "total" => 90.0}
+#66        orders_spec.rb:11          → ActiveSupport::HashWithIndifferentAccess#[] (library) returned 90.0
+#67        orders_spec.rb:11          → RSpec::Matchers#expect (library) returned #<RSpec::Expectations::ValueExpectationTarget @tar…
+#68        orders_spec.rb:11          → RSpec::Matchers#eq (library) returned #<RSpec::Matchers::BuiltIn::Eq @expected=90.0>
+#69        orders_spec.rb:11          → RSpec::Expectations::ValueExpectationTarget#to (library) returned true
+#70        orders_spec.rb:12        ← example: POST /orders/:id/price prices the order returned true

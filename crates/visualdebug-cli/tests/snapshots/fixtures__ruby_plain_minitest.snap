@@ -1,0 +1,23 @@
+---
+source: crates/visualdebug-cli/tests/fixtures.rs
+assertion_line: 62
+expression: s
+---
+trace: golden-minitest  (16 steps, 16 rows shown; exit 0; ruby)
+command: ruby test/inventory_test.rb
+#1         inventory_test.rb:9      → InventoryTest#test_restock_tops_up_low_items
+#2         inventory_test.rb:10     │ added = @inv.restock(3)
+#3         inventory.rb:9             → Inventory#restock   ⟶ min=3
+#4         inventory.rb:10            │ added = 0
+#5         inventory.rb:11            │ i = 0   ⟶ added: nil → 0
+#6         inventory.rb:12            │ while i < @items.size   ⟶ i: nil → 0
+#7         inventory.rb:13            │ item = @items[i]
+#8         inventory.rb:14            │ if item.qty < min   ⟶ item: nil → #<struct Inventory::Item sku="…
+#9         inventory.rb:15            │ added += min - item.qty
+#10        inventory.rb:16            │ item.qty = min   ⟶ added: 0 → 2
+#11        inventory.rb:18            │ i += 1   ⟶ item: #<struct Inventory::Item sku="… → #<struct Inventory::Item sku="… (mutated), @items: [#<struct Inventory::Item sku=… → [#<struct Inventory::Item sku=… (mutated)
+#12        inventory.rb:20            │ added   ⟶ i: 0 → 1
+#13        inventory.rb:21            ← Inventory#restock returned 2
+#14        inventory_test.rb:11     │ assert_equal 2, added   ⟶ added: nil → 2, @inv: #<Inventory @items=[#<struct I… → #<Inventory @items=[#<struct I… (mutated)
+#15        inventory_test.rb:11       → Minitest::Assertions#assert_equal (library) returned true
+#16        inventory_test.rb:12     ← InventoryTest#test_restock_tops_up_low_items returned true

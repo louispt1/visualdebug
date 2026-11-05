@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>{{TITLE}}</title>
+<style>{{CSS}}</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <span class="brand">visualdebug</span>
+    <nav id="tabs" class="tabs" role="tablist" aria-label="Traces"></nav>
+    <span id="meta" class="meta"></span>
+    <span class="spacer"></span>
+    <button id="tourToggle" class="btn" hidden aria-pressed="true" title="Show or hide the guided tour (t)">Tour</button>
+    <button id="helpBtn" class="btn icon" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">?</button>
+  </header>
+  <div id="timeline" class="timeline" role="slider" tabindex="0" aria-label="Execution timeline. Click or drag to scrub."
+       aria-valuemin="1" aria-valuenow="1"><canvas id="tl"></canvas></div>
+  <main class="main">
+    <section class="code-pane" aria-label="Source code">
+      <div class="pane-head"><span id="fileName" class="file-name"></span><span id="where" class="where"></span></div>
+      <div id="code" class="code" role="list" aria-label="Source lines. Click a line to jump to its next execution; Shift-click for the previous."></div>
+    </section>
+    <aside class="side">
+      <section id="tour" class="panel tour" hidden aria-live="polite"></section>
+      <section class="panel"><h2>Variables</h2><div id="vars" class="vars"></div></section>
+      <section id="historyPanel" class="panel" hidden>
+        <h2><span id="historyTitle"></span> <button id="historyClose" class="btn tiny" aria-label="Close value history">×</button></h2>
+        <div id="history" class="list"></div>
+      </section>
+      <section class="panel"><h2>Call stack</h2><ol id="stack" class="stack"></ol></section>
+      <section class="panel"><h2>Side effects <span id="effectsCount" class="count"></span></h2><div id="effects" class="list"></div></section>
+    </aside>
+  </main>
+  <footer class="status">
+    <span class="controls">
+      <button class="btn" data-act="start" aria-label="Jump to start" title="Start (Home)">⏮</button>
+      <button class="btn" data-act="backOver" aria-label="Step back over" title="Step back over (Shift+←)">↶</button>
+      <button class="btn" data-act="back" aria-label="Step back" title="Step back (← or k)">◀</button>
+      <button class="btn" data-act="fwd" aria-label="Step forward" title="Step forward (→ or j)">▶</button>
+      <button class="btn" data-act="over" aria-label="Step over" title="Step over (Shift+→)">↷</button>
+      <button class="btn" data-act="out" aria-label="Step out" title="Step out (u)">⤴</button>
+      <button class="btn" data-act="end" aria-label="Jump to end" title="End (End)">⏭</button>
+    </span>
+    <span id="status" class="status-text" aria-live="polite"></span>
+  </footer>
+  <div id="help" class="overlay" hidden role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+    <div class="card">
+      <h2>Keyboard</h2>
+      <table>
+        <tr><td><kbd>→</kbd> <kbd>j</kbd> / <kbd>←</kbd> <kbd>k</kbd></td><td>Step forward / back</td></tr>
+        <tr><td><kbd>Shift</kbd>+<kbd>→</kbd> / <kbd>Shift</kbd>+<kbd>←</kbd></td><td>Step over / back over (skip deeper calls)</td></tr>
+        <tr><td><kbd>u</kbd></td><td>Step out of the current function</td></tr>
+        <tr><td><kbd>Home</kbd> / <kbd>End</kbd></td><td>Start / end</td></tr>
+        <tr><td><kbd>n</kbd> / <kbd>p</kbd></td><td>Next / previous tour stop</td></tr>
+        <tr><td><kbd>t</kbd></td><td>Show / hide the tour</td></tr>
+        <tr><td>click a line</td><td>Next time it runs (Shift-click: previous)</td></tr>
+        <tr><td>click a variable</td><td>Its value history</td></tr>
+        <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td>Switch trace tab</td></tr>
+        <tr><td><kbd>?</kbd> / <kbd>Esc</kbd></td><td>This help / close</td></tr>
+      </table>
+      <p class="muted">The URL keeps your position (<code>#step-123</code>) so you can share it.</p>
+    </div>
+  </div>
+</div>
+<script id="vd-data" type="application/json">{{DATA}}</script>
+<script>{{JS}}</script>
+</body>
+</html>

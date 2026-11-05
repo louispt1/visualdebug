@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/louisparkes-talbot/visualdebug/schema/trace.schema.json",
+  "title": "visualdebug trace (normalized), version 1",
+  "description": "Written by `visualdebug run` to .visualdebug/traces/<name>.json. Probe events (the JSONL the probes write) are described under $defs.probeEvent.",
+  "type": "object",
+  "required": ["version", "name", "steps"],
+  "properties": {
+    "version": { "const": 1 },
+    "name": { "type": "string" },
+    "language": { "enum": ["ruby", "python", "node", null] },
+    "command": { "type": "array", "items": { "type": "string" } },
+    "exit_code": { "type": ["integer", "null"] },
+    "truncated": { "type": "boolean", "description": "Recording stopped at --max-events." },
+    "start_at": { "type": ["string", "null"], "description": "Recording trigger: file:line, Class#method, module.func, or auto:test (one window per test body)." },
+    "raw_events": { "type": "integer" },
+    "focus": {
+      "type": "object",
+      "properties": {
+        "base": { "type": ["string", "null"] },
+        "files": {
+          "type": "object",
+          "description": "Project-relative path -> changed line ranges [start, end] (inclusive). Empty array: whole file in focus. These files were recorded line by line; other project files call/return only.",
+          "additionalProperties": { "type": "array", "items": { "$ref": "#/$defs/range" } }
+        }
+      }
+    },
+    "steps": { "type": "array", "items": { "$ref": "#/$defs/step" } },
+    "annotations": { "description": "Merged by `visualdebug annotate`; see annotations.schema.json." }
+  },
+  "$defs": {
+    "range": { "type": "array", "prefixItems": [{ "type": "integer" }, { "type": "integer" }], "minItems": 2, "maxItems": 2 },
+    "value": {
+      "type": "object",
+      "required": ["type", "repr"],
+      "properties": {
+        "type": { "type": "string" },
+        "repr": { "type": "string", "description": "At most ~200 chars; never produced by code that could do I/O." },
+        "truncated": { "type": "boolean" },
+        "id": { "description": "Object identity when the runtime has a stable one (Ruby, Python)." }
+      }
+    },
+    "kind": { "enum": ["call", "line", "return", "raise", "block_call", "block_return", "side_effect"] },
+    "step": {
+      "type": "object",
+      "required": ["id", "kind", "frame", "depth", "pid"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1, "description": "Stable; annotations target it." },
+        "kind": { "$ref": "#/$defs/kind" },
+        "file": { "type": "string", "description": "Project-relative." },
+        "line": { "type": "integer" },
+        "function": { "type": "string", "description": "Qualified: Pricer#call, pricing.Pricer.total, priceOrder." },
+        "frame": { "type": "integer", "description": "Trace-wide frame index. Library calls carry their caller's frame." },
+        "depth": { "type": "integer", "description": "Project-frame nesting inside the recording window (library frames don't count)." },
+        "library": { "type": "boolean", "description": "A collapsed call into non-project code (kind call); return_value attached when known." },
+        "locals": { "type": "object", "additionalProperties": { "$ref": "#/$defs/value" }, "description": "Snapshot BEFORE this line runs. Ruby includes self's ivars as @name." },
+        "diff": {
+          "type": "object",
+          "description": "Versus the previous snapshot of the same frame.",
+          "properties": {
+            "added": { "type": "array", "items": { "type": "string" } },
+            "changed": { "type": "object", "additionalProperties": { "type": "string" }, "description": "name -> repr before" },
+            "removed": { "type": "array", "items": { "type": "string" } },
+            "mutated": { "type": "array", "items": { "type": "string" }, "description": "Changed names whose object id stayed the same." }
+          }
+        },
+        "return_value": { "$ref": "#/$defs/value" },
+        "exception": { "type": "object", "properties": { "type": { "type": "string" }, "message": { "type": "string" } } },
+        "side_effect": {
+          "type": "object",
+          "properties": { "kind": { "type": "string" }, "sql": { "type": "string" }, "name": { "type": "string" }, "binds": { "type": "array" }, "duration_ms": { "type": "number" } }
+        },
+        "pid": { "type": "integer" }
+      }
+    },
+    "probeEvent": {
+      "description": "One JSON line in <out_dir>/trace-<pid>.jsonl, as written by a probe.",
+      "type": "object",
+      "required": ["event", "seq", "t", "pid"],
+      "properties": {
+        "event": { "enum": ["call", "line", "return", "raise", "block_call", "block_return", "side_effect", "meta"] },
+        "kind": { "description": "meta only: start | window_start | window_end | truncated" },
+        "seq": { "type": "integer", "description": "Per-process order." },
+        "t": { "type": "integer", "description": "Monotonic clock, ns; merges processes." },
+        "pid": { "type": "integer" },
+        "tid": {},
+        "file": { "type": "string" },
+        "line": { "type": "integer" },
+        "function": { "type": "string" },
+        "frame_id": { "type": "integer" },
+        "depth": { "type": "integer" },
+        "library": { "type": "boolean" },
+        "locals": { "type": "object" },
+        "return_value": { "$ref": "#/$defs/value" },
+        "exception": { "type": "object" },
+        "side_effect": { "type": "object" }
+      }
+    }
+  }
+}

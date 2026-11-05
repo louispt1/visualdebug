@@ -1,0 +1,47 @@
+---
+source: crates/visualdebug-cli/tests/fixtures.rs
+assertion_line: 52
+expression: s
+---
+trace: golden-program  (67 steps, 40 rows shown; exit 0; ruby)
+command: ruby lib/main.rb
+#1         main.rb:1                → <main>
+#2         main.rb:1                │ require_relative "inventory"
+#3         main.rb:3                │ inv = Inventory.new([Inventory::Item.new("A", 1, 2.5), Inven…
+#4         inventory.rb:4             → Inventory#initialize   ⟶ items=[#<struct Inventory::Item sku="A", qty=1…, api_token=[REDACTED]
+#5         inventory.rb:5             │ @items = items
+#6         inventory.rb:6             │ @api_token = api_token   ⟶ @items: (new) [#<struct Inventory::Item sku="A", qty=1…
+#7         inventory.rb:7             ← Inventory#initialize returned [REDACTED]
+#8         main.rb:4                │ config = { region: "eu", password: "hunter2" }   ⟶ inv: nil → #<Inventory @items=[#<struct I…
+#9         main.rb:5                │ added = inv.restock(3)   ⟶ config: nil → {region: "eu", password: [REDA…
+#10        inventory.rb:9             → Inventory#restock   ⟶ min=3
+#11        inventory.rb:10            │ added = 0
+#12        inventory.rb:11            │ i = 0   ⟶ added: nil → 0
+#13        inventory.rb:12            │ while i < @items.size   ⟶ i: nil → 0
+#14-#26    inventory.rb:13-18         loop ×3  │ item = @items[i]   ⟶ added: 0 → 5, i: 0 → 3, item: nil → #<struct Inventory::Item sku="…, @items: [#<struct Inventory::Item sku=… → [#<struct Inventory::Item sku=…
+#27        inventory.rb:20            │ added   ⟶ i: 2 → 3
+#28        inventory.rb:21            ← Inventory#restock returned 5
+#29        main.rb:6                │ puts "added #{added}, value #{inv.value}, qty #{inv.parse_qt…   ⟶ inv: #<Inventory @items=[#<struct I… → #<Inventory @items=[#<struct I… (mutated), added: nil → 5
+#30        inventory.rb:23            → Inventory#value
+#31        inventory.rb:24            │ total = 0
+#32        inventory.rb:25            │ @items.each { |item| total += item.qty * item.price }   ⟶ total: nil → 0
+#33-#41    inventory.rb:25              loop ×3 block in Inventory#value   ⟶ total: 0 → 24.5
+#42        inventory.rb:26            │ total   ⟶ total: 0 → 24.5
+#43        inventory.rb:27            ← Inventory#value returned 24.5
+#44        inventory.rb:29            → Inventory#parse_qty   ⟶ text="7 items"
+#45        inventory.rb:30            │ attempts = 0
+#46-#53    inventory.rb:32-36         loop ×2  │ attempts += 1   ⟶ text: "7 items" → "7", attempts: nil → 2
+#54        inventory.rb:39            ← Inventory#parse_qty returned 7
+#55        inventory.rb:41            → Inventory#depth   ⟶ n=3
+#56        inventory.rb:42            │ n.zero? ? 0 : 1 + depth(n - 1)
+#57        inventory.rb:42              → Integer#zero? (library) returned false
+#58        inventory.rb:41              → Inventory#depth   ⟶ n=2
+#59        inventory.rb:42              │ n.zero? ? 0 : 1 + depth(n - 1)
+#60        inventory.rb:41                → Inventory#depth   ⟶ n=1
+#61        inventory.rb:42                │ n.zero? ? 0 : 1 + depth(n - 1)
+#62        inventory.rb:41                  → Inventory#depth   ⟶ n=0
+#63        inventory.rb:42                  │ n.zero? ? 0 : 1 + depth(n - 1)
+#64        inventory.rb:43                  ← Inventory#depth returned 0
+#65        inventory.rb:43                ← Inventory#depth returned 1
+#66        inventory.rb:43              ← Inventory#depth returned 2
+#67        inventory.rb:43            ← Inventory#depth returned 3

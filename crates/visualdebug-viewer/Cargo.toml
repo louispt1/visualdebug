@@ -1,0 +1,16 @@
+[package]
+name = "visualdebug-viewer"
+description = "Bundles visualdebug traces into a self-contained HTML viewer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+visualdebug-core.workspace = true
+syntect = { version = "5", default-features = false, features = ["default-onig", "html"] }
+two-face = { version = "0.5", default-features = false, features = ["syntect-onig"] }

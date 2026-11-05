@@ -1,0 +1,25 @@
+---
+source: crates/visualdebug-cli/tests/fixtures.rs
+assertion_line: 78
+expression: s
+---
+trace: golden-start-at  (33 steps, 18 rows shown; exit 0; ruby)
+command: bundle exec rspec spec/services/pricer_spec.rb
+#1         pricer.rb:8              → Pricer#call
+#2         pricer.rb:9              │ discount = TIER_DISCOUNTS[@order.customer.tier]
+#3         pricer.rb:9                → Order::GeneratedAssociationMethods#customer (library) returned #<Customer id: 1, name: "Ada", tier: "gold", creat…
+#4         pricer.rb:9                → Customer::GeneratedAttributeMethods#tier (library) returned "gold"
+#5         pricer.rb:10             │ subtotal = 0   ⟶ discount: nil → 0.1
+#6         pricer.rb:11             │ @order.line_items.each do |item|   ⟶ subtotal: nil → 0
+#7         pricer.rb:11               → Order::GeneratedAssociationMethods#line_items (library) returned #<ActiveRecord::Associations::CollectionProxy Line…
+#8         pricer.rb:11               → ActiveRecord::Delegation#each (library) returned [#<LineItem id: 1, order_id: 1, sku: "A", quantity…
+#9         pricer.rb:11             SQL  SELECT "line_items".* FROM "line_items" WHERE "line_items"."order_id" = ?  (N.Nms)
+#10-#25    pricer.rb:11-13            loop ×2 block in Pricer#call   ⟶ subtotal: 0 → 120.0
+#26        pricer.rb:14             │ total = discount ? subtotal * (1 - discount) : subtotal   ⟶ subtotal: 0 → 120.0
+#27        pricer.rb:15             │ @order.update!(total: total)   ⟶ total: nil → 108.0
+#28        pricer.rb:15               → ActiveRecord::Persistence#update! (library) returned true
+#29        pricer.rb:15             SQL  SAVEPOINT active_record_1  (N.Nms)
+#30        pricer.rb:15             SQL  UPDATE "orders" SET "total" = ?, "updated_at" = ? WHERE "orders"."id" = ?  (N.Nms)
+#31        pricer.rb:15             SQL  RELEASE SAVEPOINT active_record_1  (N.Nms)
+#32        pricer.rb:16             │ total   ⟶ @order: #<Order id: 1, customer_id: 1,… → #<Order id: 1, customer_id: 1,… (mutated)
+#33        pricer.rb:17             ← Pricer#call returned 108.0
