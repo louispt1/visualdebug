@@ -38,7 +38,7 @@ macro_rules! snap {
             (r"0x[0-9a-f]{6,16}", "0xADDR"),
             (r"\d{4}-\d\d-\d\d[ T]\d\d:\d\d:\d\d(\.\d+)?( UTC)?( [+-]\d\d:?\d\d)?", "[TIME]"),
             (r"\(\d+\.\dms\)", "(N.Nms)"),
-            (r"(?m)^command: \S*/(python[0-9.]*)", "command: $1"),
+            (r"(?m)^command: (\S*/)?python[0-9.]*", "command: python"),
         ]}, { insta::assert_snapshot!($name, $text) });
     };
 }
