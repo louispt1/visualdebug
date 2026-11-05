@@ -33,7 +33,9 @@ pub struct Project {
 impl Project {
     pub fn discover() -> Result<Project> {
         let cwd = std::env::current_dir()?;
-        Ok(Project { root: find_root(&cwd) })
+        let root = find_root(&cwd);
+        // Canonical, because some runtimes report realpaths (Node; macOS's /var -> /private/var).
+        Ok(Project { root: root.canonicalize().unwrap_or(root) })
     }
 
     pub fn dir(&self) -> PathBuf {

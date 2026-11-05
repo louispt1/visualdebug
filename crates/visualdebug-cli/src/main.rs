@@ -49,7 +49,11 @@ enum Cmd {
         annotations: PathBuf,
     },
     /// Detect languages, runtimes, test runners and git; report problems
-    Doctor,
+    Doctor {
+        /// Also measure probe overhead on a micro-benchmark for each installed runtime
+        #[arg(long)]
+        bench: bool,
+    },
     /// Install the Claude Code skill (default: --user, i.e. ~/.claude/skills/visualdebug)
     InstallSkill {
         /// ~/.claude/skills (all projects)
@@ -76,7 +80,7 @@ fn main() {
         Cmd::Summarize { trace, format, max_lines } => cmd_summarize(trace.as_deref(), format, max_lines).map(|_| 0),
         Cmd::View { traces, out, no_open } => cmd_view(&traces, out, no_open).map(|_| 0),
         Cmd::Annotate { trace, annotations } => cmd_annotate(&trace, &annotations),
-        Cmd::Doctor => doctor::doctor(),
+        Cmd::Doctor { bench } => doctor::doctor().and_then(|c| if bench { println!(); doctor::bench().map(|b| c.max(b)) } else { Ok(c) }),
         Cmd::InstallSkill { user: _, project } => cmd_install_skill(project).map(|_| 0),
         Cmd::Clean => cmd_clean().map(|_| 0),
     };

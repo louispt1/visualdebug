@@ -10,7 +10,13 @@ const { SourceMap } = require("node:module");
 const { fileURLToPath } = require("node:url");
 
 const cfg = JSON.parse(fs.readFileSync(workerData.configPath, "utf8"));
-const ROOT = cfg.root.replace(/\/$/, "") + "/";
+const ROOT = (() => {
+  try {
+    return fs.realpathSync(cfg.root).replace(/\/$/, "") + "/"; // Node reports realpaths (e.g. /private/var on macOS)
+  } catch {
+    return cfg.root.replace(/\/$/, "") + "/";
+  }
+})();
 const OUT = cfg.out_dir;
 const LINE_FILES = cfg.line_files ? new Set(cfg.line_files) : null;
 const MAX_EVENTS = cfg.max_events || 20000;
@@ -95,11 +101,12 @@ function original(loc) {
   return { abs, file: relOf(abs), line: e.originalLine + 1 };
 }
 
-// Lines to break on in a file: every line of a line-level file, plus the start target.
+// Lines to break on: with a start target, only that line (stepping supplies the detail, and
+// breakpoints elsewhere would pause outside the window); otherwise every line of the focus files.
 function wantedLines(rel, n) {
+  if (START) return START.file === rel ? [START.line] : [];
   const out = [];
   if (LINE_FILES && LINE_FILES.has(rel)) for (let l = 1; l <= n; l++) out.push(l);
-  if (START && START.file === rel) out.push(START.line);
   return out;
 }
 
