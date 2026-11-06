@@ -2,7 +2,8 @@
   --bg: #fbfbfa; --panel: #ffffff; --fg: #1f2328; --muted: #6a737d; --line: #e6e6e3;
   --accent: #0b6bcb; --accent-bg: #e4effb; --cur: #fff3c4; --cur-edge: #e0b400;
   --chg: #d98f00; --new: #1a7f37; --new-bg: #e6f6ea; --del: #b42318; --mut: #8250df;
-  --sql: #c2410c; --raise: #cf222e; --depth: #c9d6e6; --dim: 0.42;
+  --sql: #c2410c; --raise: #cf222e; --depth: #d4d6da; --dim: 0.42;
+  --f0: #5bb5a2; --f1: #8fbf5a; --f2: #a98bd6; --f3: #e28fb6; --f4: #b8c24a; --f5: #5fb3d9; --f6: #b59a7a; --f7: #7b8fd1;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
@@ -11,7 +12,8 @@
     --bg: #16181c; --panel: #1d2026; --fg: #d7dae0; --muted: #8b929c; --line: #2c3038;
     --accent: #5aa7ff; --accent-bg: #1d3350; --cur: #3a3417; --cur-edge: #c9a227;
     --chg: #e3a63b; --new: #56d364; --new-bg: #1b3524; --del: #ff7b72; --mut: #c297ff;
-    --sql: #f0883e; --raise: #ff6b6b; --depth: #34465c; --dim: 0.38;
+    --sql: #f0883e; --raise: #ff6b6b; --depth: #3a3d44; --dim: 0.38;
+    --f0: #3f9c8a; --f1: #6f9f45; --f2: #8e72c4; --f3: #c46f98; --f4: #98a23a; --f5: #3f93b8; --f6: #94795c; --f7: #5f72b3;
   }
 }
 * { box-sizing: border-box; }
@@ -40,6 +42,7 @@ button { font: inherit; color: inherit; }
 
 .timeline { height: 54px; border-bottom: 1px solid var(--line); background: var(--panel); cursor: pointer; position: relative; }
 .timeline canvas { width: 100%; height: 100%; display: block; }
+.tl-tip { position: absolute; top: 100%; margin-top: 4px; transform: translateX(-50%); z-index: 5; pointer-events: none; white-space: nowrap; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; font: 12px var(--mono); box-shadow: 0 2px 8px rgba(0,0,0,.18); }
 
 .main { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr); min-height: 0; }
 .code-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--line); }
@@ -122,6 +125,7 @@ button { font: inherit; color: inherit; }
 
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; max-width: 520px; }
+.card h2 { font-size: 14px; margin: 12px 0 4px; }
 .card td { padding: 3px 12px 3px 0; }
 kbd { font: 11px var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; background: var(--bg); }
 .banner { padding: 20px; color: var(--muted); }

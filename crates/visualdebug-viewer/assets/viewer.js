@@ -518,6 +518,15 @@
   // ------------------------------------------------------------------ timeline
   const tl = $("tl");
   let tlBase = null;
+  // ponytail: names hash into 8 colours, so neighbours can share one; the divider and hover tell them apart
+  const PALETTE = 8;
+  const hash = (str) => { let h = 0; for (const c of str) h = (h * 31 + c.charCodeAt(0)) | 0; return h >>> 0; };
+  // null = grey: library calls and files outside the focus
+  const colourKey = (s) => (s.library || !s.file || !T.lineLevel(s.file) ? null : (T.frames.get(s.frame) || {}).fn || fnName(s));
+  const stepAtX = (ev) => {
+    const r = tl.getBoundingClientRect();
+    return Math.min(T.steps.length - 1, Math.max(0, Math.floor(((ev.clientX - r.left) / r.width) * T.steps.length)));
+  };
   function drawTimelineBase() {
     const rect = tl.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
@@ -533,24 +542,35 @@
     const maxD = Math.max(1, ...T.steps.map((s) => s.depth));
     const minD = Math.min(...T.steps.map((s) => s.depth));
     const top = 12 * dpr, bottom = H - 8 * dpr, span = bottom - top;
-    g.fillStyle = col("--depth");
+    const pal = Array.from({ length: PALETTE }, (_, k) => col(`--f${k}`)), grey = col("--depth"), gap = col("--panel");
+    const sqlMax = Math.max(0, ...T.effects.map((i) => ms(T.steps[i])));
     const marks = { sql: [], raise: [], chg: [] };
+    let prevKey;
     for (let x = 0; x < W; x++) {
       const a = Math.floor((x / W) * n), b = Math.max(a + 1, Math.floor(((x + 1) / W) * n));
-      let d = 0;
+      let deep = null;
       for (let i = a; i < b && i < n; i++) {
         const s = T.steps[i];
-        if (s.depth > d) d = s.depth;
-        if (s.kind === "side_effect") marks.sql.push(x);
+        if (!deep || s.depth > deep.depth) deep = s;
+        if (s.kind === "side_effect") marks.sql.push([x, ms(s)]);
         else if (s.kind === "raise") marks.raise.push(x);
         else if (s.file && s.line && s.kind === "line" && isChanged(s.file, s.line)) marks.chg.push(x);
       }
-      const hgt = ((d - minD + 1) / (maxD - minD + 1)) * span;
+      if (!deep) continue;
+      const key = colourKey(deep);
+      const hgt = ((deep.depth - minD + 1) / (maxD - minD + 1)) * span;
+      g.fillStyle = key == null ? grey : pal[hash(key) % PALETTE];
       g.fillRect(x, bottom - hgt, 1, hgt);
+      if (x && key !== prevKey) { g.fillStyle = gap; g.fillRect(x, bottom - hgt, Math.max(1, dpr), hgt); }
+      prevKey = key;
     }
     const tick = (xs, color, y, h) => { g.fillStyle = col(color); for (const x of new Set(xs)) g.fillRect(x, y, Math.max(1, dpr), h); };
     tick(marks.chg, "--chg", H - 6 * dpr, 6 * dpr);
-    tick(marks.sql, "--sql", H - 6 * dpr, 6 * dpr);
+    g.fillStyle = col("--sql");
+    for (const [x, d] of marks.sql) {
+      const h = 6 * dpr + (sqlMax ? (d / sqlMax) * (span - 6 * dpr) : 0); // taller = slower query
+      g.fillRect(x, H - h, Math.max(1, dpr), h);
+    }
     tick(marks.raise, "--raise", top, span);
     g.fillStyle = col("--accent");
     const dot = (i, r) => { g.beginPath(); g.arc(((i + 0.5) / n) * W, 6 * dpr, r * dpr, 0, Math.PI * 2); g.fill(); };
@@ -573,11 +593,20 @@
     $("timeline").setAttribute("aria-valuemax", String(n));
     $("timeline").setAttribute("aria-valuenow", String(T.cur + 1));
   }
-  function scrubTo(ev) {
-    const r = tl.getBoundingClientRect();
-    const f = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
-    go(Math.floor(f * T.steps.length));
+  function scrubTo(ev) { go(stepAtX(ev)); }
+  function showTip(ev) {
+    if (!T.steps.length) return;
+    const s = T.steps[stepAtX(ev)], tip = $("tlTip");
+    let text = `#${s.id} ${s.library ? "→ " + fnName(s) + " (library)" : (T.frames.get(s.frame) || {}).fn || fnName(s)}`;
+    if (s.file) text += ` · ${s.file}:${s.line}`;
+    if (s.kind === "side_effect") text += ` · ${effectLabel(s)}${ms(s) ? ` (${ms(s).toFixed(1)}ms)` : ""}`;
+    if (s.kind === "raise" && s.exception) text += ` · raises ${s.exception.type}`;
+    tip.textContent = text;
+    tip.hidden = false;
+    const r = tl.getBoundingClientRect(), half = tip.offsetWidth / 2;
+    tip.style.left = Math.min(r.width - half, Math.max(half, ev.clientX - r.left)) + "px";
   }
+  const ms = (s) => +((s.side_effect || {}).duration_ms) || 0;
 
   // ------------------------------------------------------------------ status + main render
   function renderStatus() {
@@ -667,6 +696,8 @@
   }
   let dragging = false;
   tl.addEventListener("mousedown", (e) => { dragging = true; scrubTo(e); });
+  tl.addEventListener("mousemove", showTip);
+  tl.addEventListener("mouseleave", () => ($("tlTip").hidden = true));
   window.addEventListener("mousemove", (e) => { if (dragging) scrubTo(e); });
   window.addEventListener("mouseup", () => (dragging = false));
   window.addEventListener("resize", drawTimelineBase);

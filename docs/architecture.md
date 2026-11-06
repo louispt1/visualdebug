@@ -77,6 +77,11 @@ symlinks so the packaged crate contains them).
 16. **Value limits are 2000 characters and 50 items** (spec: 200 and 10), overridable with
     `--max-repr`. At 200 a single model instance was already cut off, and the probe keeps nothing
     past the limit, so the viewer had nothing to expand. The viewer clamps long values to 3 lines instead.
+17. **Viewer interactions:** clicking a variable's *name* opens its value history; clicking a clamped value
+    expands it (spec: clicking the variable opens history). The timeline colours each column by the
+    function running (grey for library code and files outside the focus) and SQL marks grow with query
+    time, on top of the spec's depth sparkline. Per-step timing and memory are deliberately not shown:
+    tracing overhead dominates them, so they would point at the wrong hotspots.
 
 ## Ruby probe notes
 

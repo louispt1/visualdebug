@@ -83,7 +83,7 @@ visualdebug compare main --start-at "Pricer#call" -- bundle exec rspec spec/serv
 | click a variable | its value history |
 | ? | all shortcuts |
 
-The timeline shows call depth, changed lines, SQL and tour stops; `#step-123` in the URL shares a
+The timeline shows call depth coloured by function (hover to name it), changed lines, SQL and tour stops; `#step-123` in the URL shares a
 position. Light and dark mode follow your system. 20k-step traces stay smooth.
 
 ## How it works

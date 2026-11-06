@@ -18,7 +18,7 @@
     <button id="helpBtn" class="btn icon" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">?</button>
   </header>
   <div id="timeline" class="timeline" role="slider" tabindex="0" aria-label="Execution timeline. Click or drag to scrub."
-       aria-valuemin="1" aria-valuenow="1"><canvas id="tl"></canvas></div>
+       aria-valuemin="1" aria-valuenow="1"><canvas id="tl"></canvas><div id="tlTip" class="tl-tip" hidden></div></div>
   <main class="main" id="main">
     <section class="code-pane" id="basePane" hidden aria-label="Base version source">
       <div class="pane-head"><span id="baseLabel" class="side-label">base</span><span id="fileName2" class="file-name"></span><span id="where2" class="where"></span></div>
@@ -69,6 +69,11 @@
         <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td>Switch trace tab</td></tr>
         <tr><td><kbd>?</kbd> / <kbd>Esc</kbd></td><td>This help / close</td></tr>
       </table>
+      <h2>Timeline</h2>
+      <p>Execution runs left to right. Bar height is call depth; colour is the function running
+        (grey: library code or files outside the focus). Hover to name it, click or drag to jump.
+        Marks: blue dots are tour stops and notes, orange ticks changed lines, rust bars SQL (taller is
+        slower), red lines exceptions.</p>
       <p class="muted">The URL keeps your position (<code>#step-123</code>) so you can share it.</p>
     </div>
   </div>
