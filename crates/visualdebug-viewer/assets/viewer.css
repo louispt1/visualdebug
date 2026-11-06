@@ -17,6 +17,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 13px/1.45 var(--sans); }
 button { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 #app { display: grid; grid-template-rows: auto auto 1fr auto; height: 100vh; }
 
@@ -45,7 +46,7 @@ button { font: inherit; color: inherit; }
 .pane-head { display: flex; gap: 10px; align-items: baseline; padding: 5px 12px; border-bottom: 1px solid var(--line); background: var(--panel); font-family: var(--mono); font-size: 12px; }
 .file-name { font-weight: 600; }
 .where { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.code { overflow: auto; flex: 1; font: 12.5px/19px var(--mono); padding: 4px 0 40vh; tab-size: 4; }
+.code { position: relative; overflow: auto; flex: 1; font: 12.5px/19px var(--mono); padding: 4px 0 40vh; tab-size: 4; }
 .ln { display: flex; white-space: pre; cursor: pointer; min-height: 19px; }
 .ln:hover { background: color-mix(in srgb, var(--accent-bg) 45%, transparent); }
 .gut { flex: none; width: 74px; display: flex; justify-content: flex-end; gap: 6px; padding-right: 8px; color: var(--muted); user-select: none; border-left: 3px solid transparent; }
@@ -118,7 +119,6 @@ button { font: inherit; color: inherit; }
 .status-text { color: var(--muted); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; }
-.overlay[hidden] { display: none; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; max-width: 520px; }
 .card td { padding: 3px 12px 3px 0; }
 kbd { font: 11px var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; background: var(--bg); }
