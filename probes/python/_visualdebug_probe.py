@@ -35,7 +35,7 @@ class Probe:
         self.max_events = cfg.get("max_events", 20000)
         self.redact = re.compile(cfg.get("redact") or "password|passwd|secret|token|api_key|apikey|authorization|cookie|session|private_key|credential", re.I)
         lim = cfg.get("limits") or {}
-        self.max_repr, self.max_items, self.max_depth = lim.get("repr", 200), lim.get("items", 10), lim.get("depth", 3)
+        self.max_repr, self.max_items, self.max_depth = lim.get("repr", 2000), lim.get("items", 50), lim.get("depth", 3)
         self.seq = itertools.count(1)
         self.fids = itertools.count(1)
         self.count = 0

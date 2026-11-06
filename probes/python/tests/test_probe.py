@@ -11,7 +11,7 @@ PROBE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PYTHON = os.environ.get("PYTHON", sys.executable)
 
 
-def trace(code, start_at=None, line_files=None, max_events=1000, files=None, env=None, backend=None):
+def trace(code, start_at=None, line_files=None, max_events=1000, files=None, env=None, backend=None, limits=None):
     with tempfile.TemporaryDirectory() as d:
         root = os.path.join(d, "proj")
         out = os.path.join(root, ".visualdebug", "run")
@@ -23,7 +23,7 @@ def trace(code, start_at=None, line_files=None, max_events=1000, files=None, env
                 f.write(textwrap.dedent(body))
         with open(os.path.join(root, "app.py"), "w") as f:
             f.write(textwrap.dedent(code))
-        cfg = {"root": root, "out_dir": out, "start_at": start_at, "line_files": line_files, "max_events": max_events}
+        cfg = {"root": root, "out_dir": out, "start_at": start_at, "line_files": line_files, "max_events": max_events, "limits": limits}
         with open(os.path.join(out, "config.json"), "w") as f:
             json.dump(cfg, f)
         e = dict(os.environ, VISUALDEBUG_CONFIG=os.path.join(out, "config.json"), PYTHONPATH=PROBE_DIR)
@@ -89,11 +89,17 @@ class Both:
             self.assertEqual(last["locals"]["obj"]["repr"], "<thing.Lazy n=1>")
 
     def test_limits_and_truncation(self):
-        ev, _, _, allev = self.trace("big = list(range(50))\ns = 'x' * 500\nprint(1)\n")
+        ev, _, _, allev = self.trace("big = list(range(60))\ns = 'x' * 5000\nprint(1)\n")
         loc = [e for e in ev if e["event"] == "line"][-1]["locals"]
         self.assertTrue(loc["big"]["truncated"])
-        self.assertIn("40 more", loc["big"]["repr"])
-        self.assertLessEqual(len(loc["s"]["repr"]), 205)
+        self.assertIn("10 more", loc["big"]["repr"])
+        self.assertTrue(loc["s"]["truncated"])
+        self.assertGreater(len(loc["s"]["repr"]), 1000)
+        self.assertLessEqual(len(loc["s"]["repr"]), 2005)
+        ev, _, _, _ = self.trace("s = 'x' * 500\nprint(1)\n", limits={"repr": 100})
+        s = [e for e in ev if e["event"] == "line"][-1]["locals"]["s"]
+        self.assertTrue(s["truncated"])
+        self.assertLessEqual(len(s["repr"]), 105)
         ev, _, _, allev = self.trace("i = 0\nwhile i < 1000:\n    i += 1\n", max_events=40)
         self.assertTrue(any(e.get("kind") == "truncated" for e in allev))
         self.assertEqual(len(ev), 40)

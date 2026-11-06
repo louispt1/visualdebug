@@ -26,8 +26,8 @@ One JSON object per line, written by the in-process probes:
 | `side_effect` | `{kind:"sql", sql, name, binds, duration_ms}` |
 | `kind` (meta) | `start` (language, runtime), `window_start`, `window_end`, `truncated` |
 
-A value is `{type, repr, truncated, id?}`: `repr` is at most ~200 characters, containers show 10
-items and 3 levels, `id` is object identity (Ruby, Python), and redacted values are
+A value is `{type, repr, truncated, id?}`: `repr` is at most ~2000 characters (`--max-repr`), containers
+show 50 items and 3 levels, `id` is object identity (Ruby, Python), and redacted values are
 `{"type":"redacted","repr":"[REDACTED]"}`.
 
 ## 2. Normalized trace (`.visualdebug/traces/<name>.json`)

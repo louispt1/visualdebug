@@ -9,7 +9,7 @@ class ProbeTest < Minitest::Test
   PROBE = File.expand_path("../visualdebug_probe.rb", __dir__)
 
   # Runs `code` (written to <root>/app.rb) under the probe; returns [events, stdout, status, errors].
-  def trace(code, start_at: nil, line_files: nil, max_events: 1000, lib: nil)
+  def trace(code, start_at: nil, line_files: nil, max_events: 1000, lib: nil, limits: nil)
     Dir.mktmpdir do |dir|
       root = File.join(dir, "proj")
       out = File.join(root, ".visualdebug", "run")
@@ -19,7 +19,7 @@ class ProbeTest < Minitest::Test
         File.write(File.join(dir, "gems", "lib.rb"), lib)
       end
       File.write(File.join(root, "app.rb"), code)
-      cfg = { root: root, out_dir: out, start_at: start_at, line_files: line_files, max_events: max_events }
+      cfg = { root: root, out_dir: out, start_at: start_at, line_files: line_files, max_events: max_events, limits: limits }
       File.write(File.join(out, "config.json"), JSON.generate(cfg))
       env = { "VISUALDEBUG_CONFIG" => File.join(out, "config.json"), "RUBYOPT" => "-r#{PROBE}" }
       stdout, status = Open3.capture2e(env, RbConfig.ruby, File.join(root, "app.rb"), chdir: root)
@@ -64,12 +64,17 @@ class ProbeTest < Minitest::Test
   end
 
   def test_truncation_and_limits
-    events, = trace("big = (1..50).to_a\ns = 'x' * 500\nputs big.size\n")
+    events, = trace("big = (1..60).to_a\ns = 'x' * 5000\nputs big.size\n")
     locals = events.select { |e| e["event"] == "line" }.last["locals"]
     assert locals["big"]["truncated"]
-    assert_includes locals["big"]["repr"], "40 more"
+    assert_includes locals["big"]["repr"], "10 more"
     assert locals["s"]["truncated"]
-    assert_operator locals["s"]["repr"].length, :<=, 205
+    assert_operator locals["s"]["repr"].length, :>, 1000
+    assert_operator locals["s"]["repr"].length, :<=, 2005
+    events, = trace("s = 'x' * 500\nputs s.size\n", limits: { repr: 100 })
+    s = events.select { |e| e["event"] == "line" }.last["locals"]["s"]
+    assert s["truncated"]
+    assert_operator s["repr"].length, :<=, 105
   end
 
   def test_max_events_marks_truncated

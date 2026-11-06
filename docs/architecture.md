@@ -74,6 +74,9 @@ symlinks so the packaged crate contains them).
     not recorded. Objects with the default `#inspect` and Structs are rendered by the probe itself (so
     redaction applies and addresses are hidden); values redacted by name stay redacted by identity.
 15. **Summaries include the source text** of each line row (trimmed) — cheap context for an LLM.
+16. **Value limits are 2000 characters and 50 items** (spec: 200 and 10), overridable with
+    `--max-repr`. At 200 a single model instance was already cut off, and the probe keeps nothing
+    past the limit, so the viewer had nothing to expand. The viewer clamps long values to 3 lines instead.
 
 ## Ruby probe notes
 

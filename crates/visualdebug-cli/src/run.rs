@@ -27,6 +27,9 @@ pub struct RunArgs {
     /// Stop recording after this many events.
     #[arg(long, default_value_t = 20_000)]
     pub max_events: u32,
+    /// Cut recorded values longer than this many characters.
+    #[arg(long, default_value_t = DEFAULT_MAX_REPR)]
+    pub max_repr: u32,
     /// The command to trace, after `--`.
     #[arg(last = true, required = true, value_name = "COMMAND")]
     pub command: Vec<String>,
@@ -438,6 +441,7 @@ pub fn run(args: RunArgs) -> Result<i32> {
         focus,
         start_at,
         max_events: args.max_events,
+        max_repr: args.max_repr,
     };
     let (trace, code) = execute(&project, plan)?;
     if !trace.steps.is_empty() {
@@ -457,7 +461,10 @@ pub struct Plan {
     pub focus: Focus,
     pub start_at: Option<String>,
     pub max_events: u32,
+    pub max_repr: u32,
 }
+
+pub const DEFAULT_MAX_REPR: u32 = 2000;
 
 pub fn execute(project: &Project, plan: Plan) -> Result<(visualdebug_core::Trace, i32)> {
     let Plan {
@@ -469,6 +476,7 @@ pub fn execute(project: &Project, plan: Plan) -> Result<(visualdebug_core::Trace
         focus,
         start_at,
         max_events,
+        max_repr,
     } = plan;
     let run_dir = project.runs_dir().join(&name);
     if run_dir.exists() {
@@ -486,7 +494,7 @@ pub fn execute(project: &Project, plan: Plan) -> Result<(visualdebug_core::Trace
         "start_at": start_at,
         "max_events": max_events,
         "redact": DEFAULT_REDACT,
-        "limits": { "repr": 200, "items": 10, "depth": 3 },
+        "limits": { "repr": max_repr, "items": 50, "depth": 3 },
     });
     std::fs::write(&config_path, serde_json::to_vec_pretty(&config)?)?;
 

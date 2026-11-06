@@ -21,8 +21,8 @@ module VisualdebugProbe
       @max_events = cfg.fetch("max_events", 20_000)
       @redact = Regexp.new(cfg["redact"] || "password|passwd|secret|token|api_key|apikey|authorization|cookie|session|private_key|credential", Regexp::IGNORECASE)
       limits = cfg["limits"] || {}
-      @max_repr = limits.fetch("repr", 200)
-      @max_items = limits.fetch("items", 10)
+      @max_repr = limits.fetch("repr", 2000)
+      @max_items = limits.fetch("items", 50)
       @max_depth = limits.fetch("depth", 3)
       @seq = 0
       @count = 0

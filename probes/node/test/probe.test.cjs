@@ -9,13 +9,13 @@ const { spawnSync } = require("node:child_process");
 
 const PROBE = path.join(__dirname, "..", "visualdebug_probe.cjs");
 
-function trace(code, { lineFiles = ["app.js"], startAt = null, maxEvents = 1000 } = {}) {
+function trace(code, { lineFiles = ["app.js"], startAt = null, maxEvents = 1000, limits = null } = {}) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "vd-node-")));
   const out = path.join(root, ".visualdebug", "run");
   fs.mkdirSync(out, { recursive: true });
   fs.writeFileSync(path.join(root, "app.js"), code);
   const cfgPath = path.join(out, "config.json");
-  fs.writeFileSync(cfgPath, JSON.stringify({ root, out_dir: out, line_files: lineFiles, start_at: startAt, max_events: maxEvents }));
+  fs.writeFileSync(cfgPath, JSON.stringify({ root, out_dir: out, line_files: lineFiles, start_at: startAt, max_events: maxEvents, limits }));
   const r = spawnSync(process.execPath, ["app.js"], {
     cwd: root,
     encoding: "utf8",
@@ -94,6 +94,15 @@ test("start_at file:line records only that function", () => {
   const { events } = trace(PROGRAM, { lineFiles: null, startAt: "app.js:3" });
   const calls = events.filter((e) => e.event === "call").map((e) => e.function);
   assert.ok(calls.length >= 1 && calls.every((f) => f === "add"), calls.join(","));
+});
+
+test("repr limit defaults to 2000 and honours config", () => {
+  const code = 'function f() {\n  const s = "x".repeat(5000);\n  return s.length;\n}\nf();\n';
+  const last = (evs) => evs.filter((e) => e.event === "line" && e.locals && e.locals.s).pop().locals.s;
+  const big = last(trace(code).events);
+  assert.ok(big.truncated && big.repr.length > 1000 && big.repr.length <= 2005, big.repr.length);
+  const small = last(trace(code, { limits: { repr: 100 } }).events);
+  assert.ok(small.truncated && small.repr.length <= 105, small.repr.length);
 });
 
 test("max_events truncates", () => {

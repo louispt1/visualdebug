@@ -69,7 +69,9 @@ button { font: inherit; color: inherit; }
 .var { display: grid; grid-template-columns: minmax(70px, max-content) 1fr; gap: 0 10px; padding: 1px 4px; border-radius: 4px; cursor: pointer; }
 .var:hover { background: var(--accent-bg); }
 .var .k { color: var(--muted); white-space: nowrap; }
-.var .v { word-break: break-word; white-space: pre-wrap; }
+.var .k:hover { text-decoration: underline; }
+.var .v { word-break: break-word; white-space: pre-wrap; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.var .v.open { display: block; }
 .var.new .k::after { content: " new"; color: var(--new); font-size: 10px; }
 .var.chg .v, .var.new .v { color: var(--fg); font-weight: 600; }
 .var.chg { background: color-mix(in srgb, var(--chg) 13%, transparent); }

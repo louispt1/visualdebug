@@ -342,7 +342,7 @@
           if ((diff.mutated || []).includes(k)) val += `<span class="mut">mutated</span>`;
         }
         if (hl.has(k)) cls.push("hl");
-        rows.push(`<div class="${cls.join(" ")}" data-var="${esc(k)}" title="${esc(v.type)}${v.truncated ? " (truncated)" : ""} — click for value history"><span class="k">${esc(k)}</span><span class="v">${val}${v.truncated ? "…" : ""}</span></div>`);
+        rows.push(`<div class="${cls.join(" ")}" data-var="${esc(k)}" title="${esc(v.type)}${v.truncated ? " (truncated)" : ""} — click the name for value history"><span class="k">${esc(k)}</span><span class="v${openVars.has(k) ? " open" : ""}">${val}</span></div>`);
       }
     }
     $(T.ids.vars).innerHTML = rows.length ? rows.join("") : `<div class="empty">No variables recorded at this step${T.lineLevel(fileOf(T.cur).file || "") ? "" : " (file outside focus: calls only)"}.</div>`;
@@ -402,6 +402,7 @@
     effList.scrollTo(Math.max(0, T.effects.indexOf(nearest)));
   }
   let effOwner = null, effList = null;
+  const openVars = new Set();
   const nearestNow = () => lastLE(T.effects, T.cur);
 
   function showHistory(name, fn) {
@@ -640,6 +641,12 @@
       return go(t.tagName === "A" ? k - 1 : k);
     }
     if (t.dataset.var) {
+      // a value clamped to 3 lines expands/collapses; anything else opens the value history
+      const v = e.target.closest(".v");
+      if (v && (v.classList.contains("open") || v.scrollHeight > v.clientHeight + 1)) {
+        v.classList.toggle("open");
+        return v.classList.contains("open") ? openVars.add(t.dataset.var) : openVars.delete(t.dataset.var);
+      }
       const fr = T.frames.get(step().frame);
       T.histVar = t.dataset.var;
       T.histFn = fr ? fr.fn : null;

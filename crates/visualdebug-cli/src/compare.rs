@@ -18,6 +18,8 @@ pub struct CompareArgs {
     pub name: Option<String>,
     #[arg(long, default_value_t = 20_000)]
     pub max_events: u32,
+    #[arg(long, default_value_t = crate::run::DEFAULT_MAX_REPR)]
+    pub max_repr: u32,
     /// Keep the temporary worktree (for debugging)
     #[arg(long)]
     pub keep_worktree: bool,
@@ -124,6 +126,7 @@ pub fn compare(args: CompareArgs) -> Result<i32> {
             focus: base_focus,
             start_at: start_at.clone(),
             max_events: args.max_events,
+            max_repr: args.max_repr,
         },
     );
     if !args.keep_worktree {
@@ -147,6 +150,7 @@ pub fn compare(args: CompareArgs) -> Result<i32> {
             focus: head_focus,
             start_at,
             max_events: args.max_events,
+            max_repr: args.max_repr,
         },
     )?;
     if base.steps.is_empty() || head.steps.is_empty() {

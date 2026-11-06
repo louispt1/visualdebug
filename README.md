@@ -65,6 +65,7 @@ visualdebug compare main --start-at "Pricer#call" -- bundle exec rspec spec/serv
 - `--start-at` starts recording when execution first enters `Class#method`, `Class.method`,
   `module.func`, a JS/TS function name, or `file:line`. Without it, test runners record each test body
   (setup excluded) and scripts record the whole program.
+- Values are cut at 2000 characters and 50 items; `--max-repr N` changes the character limit.
 - The traced command's exit status is passed through; failing tests still produce a trace.
 - Library code (gems, site-packages, node_modules) is collapsed into single `→ Lib#call (library)` steps.
 - Everything lives in `.visualdebug/` (added to `.gitignore` on first run). `visualdebug clean` removes it.
