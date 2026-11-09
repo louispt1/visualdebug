@@ -50,29 +50,14 @@ impl Project {
         self.dir().join("runs")
     }
 
-    /// Create `.visualdebug/`; on first creation add it to an existing `.gitignore`.
+    /// Create `.visualdebug/` with a `.gitignore` of `*` inside, so it ignores itself (like
+    /// `.pytest_cache`): nothing to commit, no global git config.
     pub fn ensure_dir(&self) -> Result<()> {
         let dir = self.dir();
-        if dir.exists() {
-            return Ok(());
-        }
         std::fs::create_dir_all(&dir)?;
-        let gi = self.root.join(".gitignore");
-        if let Ok(text) = std::fs::read_to_string(&gi)
-            && !text.lines().any(|l| {
-                matches!(
-                    l.trim(),
-                    ".visualdebug" | ".visualdebug/" | "/.visualdebug" | "/.visualdebug/"
-                )
-            })
-        {
-            let sep = if text.ends_with('\n') || text.is_empty() {
-                ""
-            } else {
-                "\n"
-            };
-            std::fs::write(&gi, format!("{text}{sep}.visualdebug/\n"))?;
-            eprintln!("visualdebug: added .visualdebug/ to {}", gi.display());
+        let gi = dir.join(".gitignore");
+        if !gi.exists() {
+            std::fs::write(gi, "*\n")?;
         }
         Ok(())
     }

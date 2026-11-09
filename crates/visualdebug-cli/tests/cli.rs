@@ -41,12 +41,14 @@ fn failing_command_keeps_exit_status_and_still_writes_trace() {
         .args(["run", "--", "ruby", "app.rb"])
         .assert()
         .code(3)
-        .stderr(predicate::str::contains("added .visualdebug/ to"))
         .stderr(predicate::str::contains("command exited 3"));
-    assert!(
-        std::fs::read_to_string(d.path().join(".gitignore"))
-            .unwrap()
-            .contains(".visualdebug/")
+    assert_eq!(
+        std::fs::read_to_string(d.path().join(".gitignore")).unwrap(),
+        "log/\n"
+    );
+    assert_eq!(
+        std::fs::read_to_string(d.path().join(".visualdebug/.gitignore")).unwrap(),
+        "*\n"
     );
     assert!(d.path().join(".visualdebug/traces/app.json").is_file());
 

@@ -194,7 +194,7 @@ fn cmd_clean() -> Result<()> {
     };
     let mut n = 0;
     for e in entries.flatten() {
-        if e.file_name() == "examples" {
+        if e.file_name() == "examples" || e.file_name() == ".gitignore" {
             continue;
         }
         let p = e.path();

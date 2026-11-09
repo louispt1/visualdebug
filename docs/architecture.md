@@ -82,6 +82,8 @@ symlinks so the packaged crate contains them).
     function running (grey for library code and files outside the focus) and SQL marks grow with query
     time, on top of the spec's depth sparkline. Per-step timing and memory are deliberately not shown:
     tracing overhead dominates them, so they would point at the wrong hotspots.
+18. **`.visualdebug/` ignores itself** with a `.gitignore` of `*` inside it (spec: add it to the project's
+    `.gitignore`). Editing the project's `.gitignore` left a change to commit in every repo traced.
 
 ## Ruby probe notes
 

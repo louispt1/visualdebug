@@ -131,12 +131,6 @@ pub fn doctor() -> Result<i32> {
             .problems
             .push(format!("can't write probes to the cache: {e:#}")),
     }
-    let gi = std::fs::read_to_string(root.join(".gitignore")).unwrap_or_default();
-    if root.join(".gitignore").exists() && !gi.contains(".visualdebug") {
-        r.notes
-            .push(".visualdebug/ will be added to .gitignore on the first run".into());
-    }
-
     println!();
     for n in &r.notes {
         println!("note: {n}");
