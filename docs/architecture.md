@@ -1,8 +1,8 @@
 # Architecture
 
 `visualdebug` = a deterministic Rust CLI + one thin in-process probe per language + a static HTML
-viewer + a Claude Code skill. The tool never calls an LLM. The original brief is `docs/spec.md`;
-this file records how it was built and **every deviation from the spec, with the reason**.
+viewer + a Claude Code skill. The tool never calls an LLM. This file records how it is built and
+**every non-obvious design decision, with the reason**.
 
 ## Data flow
 
@@ -44,10 +44,10 @@ symlinks so the packaged crate contains them).
 | `Class#method`, `Class.method`, `module.func` | first entry into that target, until it returns (re-arms for later calls) |
 | `file:line` | Ruby/Python: the method containing that line; Node: that line |
 
-## Deviations from the spec (agreed after Phase 0 unless noted)
+## Design decisions
 
-1. **Overhead target.** "Under 10× inside the focus window" is not achievable for line-level tracing with
-   locals snapshots in any runtime. Targets: ≈0 outside the window; per step ≲15µs (Ruby/Python),
+1. **Overhead target.** Under 10× inside the recording window is not achievable for line-level tracing
+   with locals snapshots in any runtime. Targets: ≈0 outside the window; per step ≲15µs (Ruby/Python),
    ≲0.5ms (Node).
 2. **Runtime floors** (EOL as of Nov 2026): Ruby 3.2+ (CI 3.3/3.4/4.0), Python 3.11+ (settrace only on
    3.11), Node 22/24 (20 best effort).
@@ -68,24 +68,23 @@ symlinks so the packaged crate contains them).
     summaries. The window's root frame (e.g. the test body) is always line-level, as context.
 12. **`file:line` start targets** resolve to the enclosing method (Ruby: by walking the compiled ISeq
     tree, which runs nothing and activates no gems).
-13. **Extra flags:** `run --focus FILE` (repeatable) for focus without git.
+13. **`run --focus FILE`** (repeatable) gives focus without git.
 14. **Noise filtering (Ruby):** Rails `SCHEMA` queries, load/definition hooks (`require`, `inherited`,
     `const_added`, ...), library calls made by class bodies during autoload, and test-framework ivars are
     not recorded. Objects with the default `#inspect` and Structs are rendered by the probe itself (so
     redaction applies and addresses are hidden); values redacted by name stay redacted by identity.
-15. **Summaries include the source text** of each line row (trimmed) — cheap context for an LLM.
-16. **Value limits are 2000 characters and 50 items** (spec: 200 and 10), overridable with
-    `--max-repr`. At 200 a single model instance was already cut off, and the probe keeps nothing
+15. **Summaries include the source text** of each line row (trimmed): cheap context for an LLM.
+16. **Value limits are 2000 characters and 50 items**, overridable with `--max-repr`. At 200 a single model instance was already cut off, and the probe keeps nothing
     past the limit, so the viewer had nothing to expand. The viewer clamps long values to 3 lines instead.
 17. **Viewer interactions:** clicking a variable's *name* opens its value history; clicking a clamped value
-    expands it (spec: clicking the variable opens history). The timeline colours each column by the
+    expands it. The timeline colours each column by the
     function running (grey for library code and files outside the focus) and SQL marks grow with query
-    time, on top of the spec's depth sparkline. Per-step timing and memory are deliberately not shown:
+    time, on top of the depth sparkline. Per-step timing and memory are deliberately not shown:
     tracing overhead dominates them, so they would point at the wrong hotspots.
-18. **`.visualdebug/` ignores itself** with a `.gitignore` of `*` inside it (spec: add it to the project's
-    `.gitignore`). Editing the project's `.gitignore` left a change to commit in every repo traced.
-19. **Redaction pattern is `password|secret|private_key|credential`** (spec also lists `passwd`, `token`,
-    `api_key`, `apikey`, `authorization`, `cookie`, `session`). Traces run in test/dev, where those values
+18. **`.visualdebug/` ignores itself** with a `.gitignore` of `*` inside it, rather than being added to
+    the project's `.gitignore`. Editing the project's `.gitignore` left a change to commit in every repo traced.
+19. **Redaction pattern is `password|secret|private_key|credential`**, not also `passwd`, `token`,
+    `api_key`, `apikey`, `authorization`, `cookie` or `session`. Traces run in test/dev, where those values
     are rarely useful to an attacker, and the broad pattern hid ordinary values like `session_id`.
 
 ## Ruby probe notes
@@ -105,7 +104,7 @@ symlinks so the packaged crate contains them).
   returns `DISABLE`, so code outside the window costs nothing. Opening a window calls
   `restart_events()`, which also re-arms other tools' disabled locations (coverage re-disables its own).
 - `sys.settrace` (3.11): the global tracer still runs once per call before the window (~6x on tight
-  loops). It *does* see library return values; `sys.monitoring` does not (deviation 8).
+  loops). It *does* see library return values; `sys.monitoring` does not (decision 8).
 - Generators and coroutines keep one frame id across yield/resume (`yielded: true` on the suspension).
 - Recorded frames: functions, plus the main script's top level. Class bodies and imported modules' top
   level are skipped (same as Ruby).
@@ -121,7 +120,7 @@ symlinks so the packaged crate contains them).
 
 - `--require visualdebug_probe.cjs` starts an inspector worker (`connectToMainThread`) and blocks in
   `Atomics.wait` until it is ready (~25ms). The worker keeps itself alive with a timer: a pending
-  inspector call does not, and without it the worker exits mid-handshake (the Phase 0 "deadlock").
+  inspector call does not, and without it the worker exits mid-handshake (an early "deadlock").
 - Recording: breakpoints only *open* a window; `Debugger.stepInto` drives it, with node internals and
   `node_modules` blackboxed. Every pause is answered (step or resume) even if recording fails.
 - Frame identity: V8 call frame ids change between pauses, so the project-frame stack is aligned
@@ -145,7 +144,7 @@ symlinks so the packaged crate contains them).
 - Runners: Jest gets `--runInBand`; Vitest gets `--pool=forks --no-file-parallelism` (the probe skips
   worker threads). Golden tests keep exact snapshots per Node major version and check structure on others.
 
-## compare (Phase 7)
+## compare
 
 `visualdebug compare <base-ref> -- <cmd>` adds a temporary `git worktree` of the whole repo at the
 base ref under `.visualdebug/worktrees/` and removes it afterwards (`--keep-worktree` to inspect).

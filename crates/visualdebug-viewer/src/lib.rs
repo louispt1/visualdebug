@@ -156,7 +156,7 @@ pub fn bundle(traces: &[Trace], source: &dyn Fn(&Trace, &str) -> Option<String>)
         .map(|t| t.name.as_str())
         .collect::<Vec<_>>()
         .join(", ");
-    let title = escape(&format!("visualdebug — {title}"));
+    let title = escape(&format!("visualdebug: {title}"));
     let css = format!("{CSS}\n{}", theme_css());
     Ok(fill(
         INDEX,

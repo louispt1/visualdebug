@@ -40,7 +40,7 @@ Produced by `visualdebug run` from all of a run's JSONL files:
   file/line;
 - each step with `locals` gets a `diff` against the previous snapshot of the same frame:
   `added`, `changed` (name → previous repr), `removed`, `mutated` (changed but same object id);
-- `id` (1-based) is stable — summaries and annotations refer to it;
+- `id` (1-based) is stable: summaries and annotations refer to it;
 - `focus.files` maps changed files to changed line ranges; `annotations` is filled by `annotate`.
 
 ## 3. Summaries (`visualdebug summarize`)

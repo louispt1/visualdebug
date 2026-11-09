@@ -36,7 +36,7 @@ versions check structure only; set `VISUALDEBUG_NEW_NODE_SNAPSHOTS=1` to create 
 - No network access and no LLM calls from the tool or the viewer.
 - Probes stay dependency-free and are written in their own language.
 - Probe changes come with a test in that language's own framework.
-- Deviations from `docs/spec.md` are recorded in `docs/architecture.md` with the reason.
+- Design decisions are recorded in `docs/architecture.md` with the reason.
 
 ## Releasing
 

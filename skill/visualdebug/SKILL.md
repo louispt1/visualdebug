@@ -1,6 +1,6 @@
 ---
 name: visualdebug
-description: Turn a code change into a guided, scrubbable execution trace a human can step through in the browser. Use this whenever the user wants to understand, review, walk through, or get oriented in a PR, diff, branch, commit, staged/unstaged changes, or an unfamiliar code path — "review this PR", "help me understand this change", "what does this branch do", "walk me through how X works", "how does this request get handled" — even if they never mention tracing, debugging or visualdebug. Works for Ruby/Rails, Python and Node/TypeScript projects. Prefer it over only reading the diff aloud whenever the code can actually be run.
+description: Turn a code change into a guided, scrubbable execution trace a human can step through in the browser. Use this whenever the user wants to understand, review, walk through, or get oriented in a PR, diff, branch, commit, staged/unstaged changes, or an unfamiliar code path ("review this PR", "help me understand this change", "what does this branch do", "walk me through how X works", "how does this request get handled"), even if they never mention tracing, debugging or visualdebug. Works for Ruby/Rails, Python and Node/TypeScript projects. Prefer it over only reading the diff aloud whenever the code can actually be run.
 ---
 
 # visualdebug: guided execution tours for code review
@@ -8,7 +8,7 @@ description: Turn a code change into a guided, scrubbable execution trace a huma
 `visualdebug` records how code actually executes for a concrete example, then bundles the recording
 into a self-contained HTML viewer the human scrubs through line by line (current line, variables with
 changes highlighted, call stack, SQL). **You** choose good examples and narrate; **the human** steps.
-The tool is deterministic and never calls an LLM — all judgement is yours.
+The tool is deterministic and never calls an LLM; all judgement is yours.
 
 The goal is the reviewer's *understanding*, not automated debugging. Optimize for "after 10 minutes
 in the viewer, they could explain the change to a colleague and spot what might be wrong with it".
@@ -26,7 +26,7 @@ in the viewer, they could explain the change to a colleague and spot what might 
 
 ### 2. Check the environment
 Run `visualdebug doctor`. Fix what you safely can (e.g. a missing `bundle install` in a fixture is the
-user's call — ask). If the language isn't supported, see "Unsupported languages" below.
+user's call, so ask). If the language isn't supported, see "Unsupported languages" below.
 
 ### 3. Choose 1–3 examples
 - Pick examples that make the change's behaviour **visible**: the main path, plus one edge case the
@@ -37,8 +37,8 @@ user's call — ask). If the language isn't supported, see "Unsupported language
   small script). It must be side-effect-safe: test environment, transactional fixtures, no external
   network calls, no writes outside the test database or a temp dir.
 - **Never modify application code.** Don't commit examples.
-- Language specifics (commands, entry points, runner quirks): read the matching reference —
-  `references/ruby.md`, `references/python.md`, `references/node.md` — before your first run.
+- Language specifics (commands, entry points, runner quirks): read the matching reference
+  (`references/ruby.md`, `references/python.md`, `references/node.md`) before your first run.
 
 ### 4. Trace each example
 ```
@@ -49,7 +49,7 @@ visualdebug run --focus-diff <base> --start-at <entry> --name <short-name> -- <c
 - `--start-at` is the function where the interesting behaviour begins (`Pricer#call`,
   `pricing.apply_discount`, `priceOrder`, or `file:line`). Without it, test runners record each test
   body; plain scripts record the whole program.
-- The command's exit status passes through. A failing test still produces a trace — keep it if the
+- The command's exit status passes through. A failing test still produces a trace; keep it if the
   failure is the point (see "Failing traces").
 - **If the run warns TRUNCATED or the summary is mostly noise, narrow and re-run** (a later
   `--start-at`, a single test via `file:line` / `::test_name`) rather than annotating a bad trace.
@@ -71,7 +71,7 @@ Save it next to the trace (e.g. `.visualdebug/annotations-<name>.json`):
 {
   "version": 1,
   "title": "How guest checkouts get the bulk discount",
-  "overview": "markdown: background first — what existed before, why it changed, the one-sentence intuition",
+  "overview": "markdown: background first: what existed before, why it changed, the one-sentence intuition",
   "tour": [
     { "step": 17, "title": "Tier lookup sets the discount", "body": "markdown: why this matters", "highlight_vars": ["discount"] }
   ],
@@ -85,15 +85,15 @@ Explainer principles (they matter more than coverage):
 - **Background first.** The overview says what existed before and why it changed, then gives the
   intuition in a sentence or two. No step details yet.
 - **Intuition before details.** Early stops show the shape of the flow; details come later.
-- **Explain *why* at every stop**, not what the line literally does — the reader can see the line.
-  Good: "`discount` stays `nil` here because guest checkouts have no tier — this is the case the PR
+- **Explain *why* at every stop**, not what the line literally does; the reader can see the line.
+  Good: "`discount` stays `nil` here because guest checkouts have no tier, and this is the case the PR
   fixes." Bad: "This line sets discount."
 - **5–12 stops in narrative order** (usually execution order). Point at the step where the effect is
   *visible* (variables show state before the line runs, so a change appears at the next step).
   Use `highlight_vars` for the variables the stop is about. Link other steps in markdown as `#42`.
 - Put stops on changed lines (`*`) and on the consequences of the change (a different branch, a
-  different SQL query, a different return value) — not on setup boilerplate.
-- **Quiz: 3–5 questions that check real understanding of the change** — predict behaviour for a
+  different SQL query, a different return value), not on setup boilerplate.
+- **Quiz: 3–5 questions that check real understanding of the change**: predict behaviour for a
   different input, identify which step decides the outcome, spot what would break if a line were
   removed. No trivia ("what is the variable called"). Each explanation should teach, and link a step.
 
@@ -102,11 +102,11 @@ Explainer principles (they matter more than coverage):
 visualdebug annotate <name> .visualdebug/annotations-<name>.json
 visualdebug view <name> [<name2> ...]      # several traces become tabs
 ```
-`annotate` rejects step ids that don't exist and warns about weak tours — fix and re-run.
+`annotate` rejects step ids that don't exist and warns about weak tours; fix and re-run.
 `view` writes `.visualdebug/view-<name>.html` and opens it (pass `--no-open` in headless
 environments and give the path instead).
 
-### 8. Hand off — then stop
+### 8. Hand off, then stop
 Give the human a 2–3 sentence orientation (what the change does, which example shows what, where the
 interesting part is) and the controls:
 

@@ -1,4 +1,4 @@
-# visualdebug — Node / TypeScript
+# visualdebug: Node / TypeScript
 
 Injected with `NODE_OPTIONS=--require`; no package.json changes. Node 22/24 (20 works). Uses the
 built-in inspector from a worker thread, stepping through project code with `node_modules` skipped.
@@ -17,7 +17,7 @@ visualdebug run --focus src/pricing.js -- node src/main.js
   worker threads can't be traced). Through `npm test` that can't be done: call the runner directly.
 
 ## `--start-at` forms
-- `priceOrder`, `Cart.total` / `Cart#total` — resolved to `file:line` by scanning the project's
+- `priceOrder`, `Cart.total` / `Cart#total`: resolved to `file:line` by scanning the project's
   JS/TS sources (the command prints what it chose), or `src/pricing.ts:19` directly.
 - Without it, a window opens whenever a focus file's code runs and lasts until that function returns.
 
@@ -34,7 +34,7 @@ visualdebug run --focus src/pricing.js -- node src/main.js
 ## Examples you write
 `.visualdebug/examples/guest-discount.test.ts` run with the project's runner
 (`npx vitest run .visualdebug/examples/guest-discount.test.ts`). The runner's `include` globs may
-skip that directory — then pass the file explicitly or use a `--config` that includes it, or write a
+skip that directory. Then pass the file explicitly or use a `--config` that includes it, or write a
 small `tsx` script instead. Mock network calls.
 
 ## Gotchas

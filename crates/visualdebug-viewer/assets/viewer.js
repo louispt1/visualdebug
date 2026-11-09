@@ -342,7 +342,7 @@
           if ((diff.mutated || []).includes(k)) val += `<span class="mut">mutated</span>`;
         }
         if (hl.has(k)) cls.push("hl");
-        rows.push(`<div class="${cls.join(" ")}" data-var="${esc(k)}" title="${esc(v.type)}${v.truncated ? " (truncated)" : ""} — click the name for value history"><span class="k">${esc(k)}</span><span class="v${openVars.has(k) ? " open" : ""}">${val}</span></div>`);
+        rows.push(`<div class="${cls.join(" ")}" data-var="${esc(k)}" title="${esc(v.type)}${v.truncated ? " (truncated)" : ""}}. Click the name for value history"><span class="k">${esc(k)}</span><span class="v${openVars.has(k) ? " open" : ""}">${val}</span></div>`);
       }
     }
     $(T.ids.vars).innerHTML = rows.length ? rows.join("") : `<div class="empty">No variables recorded at this step${T.lineLevel(fileOf(T.cur).file || "") ? "" : " (file outside focus: calls only)"}.</div>`;
@@ -362,7 +362,7 @@
       f = fr.parent;
       first = false;
     }
-    $("stack").innerHTML = items.join("") || `<li class="empty">—</li>`;
+    $("stack").innerHTML = items.join("") || `<li class="empty">none</li>`;
   }
 
   // Virtualized fixed-height list.
@@ -419,7 +419,7 @@
       prevFrame = x.frame;
     }
     $("historyPanel").hidden = false;
-    $("historyTitle").textContent = `${name} in ${fn} — ${hist.length} value${hist.length === 1 ? "" : "s"}`;
+    $("historyTitle").textContent = `${name} in ${fn}: ${hist.length} value${hist.length === 1 ? "" : "s"}`;
     const list = vlist($("history"), hist.length, (k) => {
       const h = hist[k];
       const s2 = T.steps[h.i];
@@ -506,7 +506,7 @@
     $("headPane").classList.toggle("missing", !h);
     const d = c.div;
     let html = `<div class="progress"><span>Comparing ${esc(c.ref)} ↔ HEAD</span><span class="pair">${c.k + 1} / ${c.pairs.length}</span></div>`;
-    html += `<div class="pair">base ${b ? "#" + b : "—"} ↔ HEAD ${h ? "#" + h : "—"}</div>`;
+    html += `<div class="pair">base ${b ? "#" + b : "none"} ↔ HEAD ${h ? "#" + h : "none"}</div>`;
     if (d) {
       const here = d.at === c.k;
       html += `<div class="div"><strong>${here ? "This is where behaviour diverges" : "First divergence"} (${esc(d.kind)})</strong><br>${esc(d.description)}</div>`;

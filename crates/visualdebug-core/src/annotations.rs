@@ -130,7 +130,7 @@ pub fn validate(trace: &Trace, json: &str) -> (Option<Annotations>, Report) {
     }
     if a.tour.len() > MAX_TOUR_STOPS {
         r.warnings.push(format!(
-            "the tour has {} stops; more than ~{MAX_TOUR_STOPS} loses the reader — aim for 5–12",
+            "the tour has {} stops; more than ~{MAX_TOUR_STOPS} loses the reader; aim for 5–12",
             a.tour.len()
         ));
     }

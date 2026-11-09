@@ -1,10 +1,10 @@
 # visualdebug
 
-**Execution traces you can scrub through, annotated by AI, for code review.**
+**Execution traces you can scrub through for code review, with a Claude Code skill that writes a guided tour.**
 
-`visualdebug` records how your code actually runs for a concrete example — every line, the local
-variables at each step (with what changed highlighted), the call stack, and side effects like SQL —
-and turns the recording into one self-contained HTML file you step through forwards and backwards.
+`visualdebug` records how your code actually runs for a concrete example: every line, the local
+variables at each step (with what changed highlighted), the call stack, and side effects like SQL.
+It turns the recording into one self-contained HTML file you step through forwards and backwards.
 
 It ships with a [Claude Code](https://claude.com/claude-code) skill: ask "help me review this PR" and
 the agent picks examples that exercise the change, traces them, and writes a guided tour (with a
@@ -19,14 +19,14 @@ short quiz) over the trace. Then *you* do the stepping.
 - Deterministic: the tool never calls an LLM, never touches the network, and the viewer works
   offline from `file://`. Secrets (`password`, `secret`, `private_key`, `credential`) are redacted before anything
   is written.
+- Traces contain your program's real data (variable values, SQL, request bodies). Redaction only
+  catches the names above, so check a trace before sharing it outside your team.
 
 ## Install
 
 ```sh
 # macOS / Linux
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/louispt1/visualdebug/releases/latest/download/visualdebug-installer.sh | sh
-# Homebrew
-brew install louispt1/tap/visualdebug
 # From source
 cargo install visualdebug
 ```
@@ -42,8 +42,7 @@ In a repository with a branch or PR checked out:
 
 The skill reads the diff, runs `visualdebug doctor`, chooses 1–3 examples (existing tests first),
 traces them focused on the changed lines, writes the tour and quiz, and opens the viewer with a short
-orientation. Example output: [docs/examples/guest-bulk-discount-review.html](docs/examples/guest-bulk-discount-review.html)
-(download and open it).
+orientation.
 
 ## Use it directly
 
@@ -97,7 +96,7 @@ variable diffs and loop compression, and bundles the viewer. Details and every d
 Overhead (`visualdebug doctor --bench`): about zero outside the recording window; inside it roughly
 5µs per step for Ruby, 8µs for Python and 0.3ms for Node. Use `--start-at` to keep windows small.
 
-Supported: Ruby 3.2+, Python 3.11+, Node 20+ (22/24 recommended), macOS and Linux (Windows best effort).
+Supported: Ruby 3.2+, Python 3.11+, Node 20+ (22/24 recommended), macOS and Linux.
 
 ## Contributing
 

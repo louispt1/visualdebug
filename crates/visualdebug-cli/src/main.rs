@@ -279,7 +279,7 @@ fn cmd_install_skill(project_scope: bool) -> Result<()> {
     }
     eprintln!("visualdebug: installed the skill to {}", dir.display());
     eprintln!(
-        "visualdebug: in Claude Code, ask e.g. \"help me review this PR\" — the skill triggers on its own"
+        "visualdebug: in Claude Code, ask e.g. \"help me review this PR\"; the skill triggers on its own"
     );
     Ok(())
 }

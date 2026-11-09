@@ -1,4 +1,4 @@
-# visualdebug — Ruby / Rails
+# visualdebug: Ruby / Rails
 
 Injected with `RUBYOPT`; no Gemfile changes. Ruby 3.2+ (best on 3.3+). Spring is disabled and Rails
 parallel tests forced to one worker automatically.
@@ -18,7 +18,7 @@ visualdebug run -- ruby lib/main.rb
 
 ## `--start-at` forms
 - `Pricer#call` (instance method), `Pricer.build` (class method), `Admin::Pricer#call`
-- `app/services/pricer.rb:18` — the method containing that line
+- `app/services/pricer.rb:18`: the method containing that line
 - Without `--start-at`, RSpec and Minitest record **each test body** (setup/`before` blocks excluded,
   but their effects are visible as state). Plain scripts record the whole program.
 - A start target re-arms: every call to it opens a new window in the same trace.
@@ -29,7 +29,7 @@ visualdebug run -- ruby lib/main.rb
   return value; blocks you pass to library code (e.g. `each`) are traced as `block in Pricer#call`.
 - SQL from ActiveRecord appears as `SQL` side-effect rows attached to the line that triggered it
   (schema introspection queries are hidden). Lazy loading shows up as a `SELECT` at the line that
-  first touches the association — often worth a tour stop.
+  first touches the association, often worth a tour stop.
 - `ActiveRecord::Relation`s and associations are shown as `unloaded` until something loads them;
   the probe never loads them itself. Models show their attributes and `(changed=...)`.
 - `BigDecimal` is shown as `90.0`.
@@ -41,7 +41,7 @@ with `require "rails_helper"` (RSpec resolves it via the project's `spec/` load 
 already has; transactional tests keep the database clean. Never modify app code.
 
 ## Gotchas
-- Huge apps: always `--start-at` — Rails boot and test setup otherwise fill the trace.
+- Huge apps: always `--start-at`, since Rails boot and test setup otherwise fill the trace.
 - `bundle exec` must work in the project first (`visualdebug doctor` checks).
 - Code run in other threads (e.g. ActionCable, concurrent-ruby pools) is only recorded in
   whole-program mode.

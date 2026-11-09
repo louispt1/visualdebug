@@ -222,7 +222,7 @@ module VisualdebugProbe
     def line_level?(rel_path) = @line_files.nil? || @line_files.key?(rel_path)
 
     # Frames on our stack are project frames only: [frame_id, name, raised?, method_id, path, line_level?]
-    # Library frames are never pushed — Ruby re-fires :call on `retry` with no matching :return, so a
+    # Library frames are never pushed: Ruby re-fires :call on `retry` with no matching :return, so a
     # push/pop count over library code drifts. Library calls classify themselves via caller_locations.
     # A library call is recorded when made directly by the current project frame (not by a class body
     # running during autoload). Skip our own frames; the next is the traced method, then its caller.
