@@ -10,7 +10,7 @@ function priceOrder(order) {
   for (const item of order.items) {
     total += subtotal(item);
   }
-  const apiToken = "s3cret";
+  const apiSecret = "s3cret";
   const summary = order.items.map((i) => i.sku).join(",");
   return discount ? Math.round(total * (1 - discount) * 100) / 100 : total;
 }

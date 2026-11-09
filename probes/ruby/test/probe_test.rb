@@ -56,7 +56,7 @@ class ProbeTest < Minitest::Test
   end
 
   def test_redaction_follows_the_value
-    events, = trace("def login(password)\n  pw = password\n  pw\nend\nlogin('hunter2')\nh = { api_key: 'k', name: 'n' }\nputs h.size\n")
+    events, = trace("def login(password)\n  pw = password\n  pw\nend\nlogin('hunter2')\nh = { client_secret: 'k', name: 'n' }\nputs h.size\n")
     dump = JSON.generate(events)
     refute_includes dump, "hunter2"
     refute_includes dump, "\"k\""

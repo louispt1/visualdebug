@@ -8,7 +8,7 @@ use visualdebug_core::Focus;
 use visualdebug_core::focus::{fmt_ranges, parse_unified_diff};
 use visualdebug_core::ingest::{RunInfo, ingest_dir};
 
-pub const DEFAULT_REDACT: &str = "password|passwd|secret|token|api_key|apikey|authorization|cookie|session|private_key|credential";
+pub const DEFAULT_REDACT: &str = "password|secret|private_key|credential";
 
 #[derive(clap::Args, Debug)]
 pub struct RunArgs {

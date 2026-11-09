@@ -11,7 +11,7 @@ focus: src/pricing.js   (* = changed line)
 #3         pricing.js:10            │ for (const item of order.items) {   ⟶ total: (new) 0
 #4-#11     pricing.js:10-11         loop ×2  │ for (const item of order.items) {   ⟶ total: 0 → 120
 #12        pricing.js:13            │ const apiToken = "s3cret";   ⟶ total: 100 → 120
-#13        pricing.js:14            │ const summary = order.items.map((i) => i.sku).join(",");   ⟶ apiToken: (new) [REDACTED]
+#13        pricing.js:14            │ const summary = order.items.map((i) => i.sku).join(",");   ⟶ apiToken: (new) "s3cret"
 #14-#17    pricing.js:14              loop ×2 (anonymous)
 #18        pricing.js:14            │ const summary = order.items.map((i) => i.sku).join(",");
 #19        pricing.js:15            │ return discount ? Math.round(total * (1 - discount) * 100) /…   ⟶ summary: (new) "A,B"

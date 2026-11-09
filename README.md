@@ -17,7 +17,7 @@ short quiz) over the trace. Then *you* do the stepping.
 - No changes to your Gemfile, requirements or package.json: probes are injected through
   `RUBYOPT`, `PYTHONPATH` and `NODE_OPTIONS`.
 - Deterministic: the tool never calls an LLM, never touches the network, and the viewer works
-  offline from `file://`. Secrets (`password`, `token`, `api_key`, ...) are redacted before anything
+  offline from `file://`. Secrets (`password`, `secret`, `private_key`, `credential`) are redacted before anything
   is written.
 
 ## Install

@@ -1,6 +1,6 @@
 ---
 source: crates/visualdebug-cli/tests/fixtures.rs
-assertion_line: 111
+assertion_line: 166
 expression: s
 ---
 trace: golden-pytest  (58 steps, 48 rows shown; exit 0; python)
@@ -26,7 +26,7 @@ command: python -m pytest -q tests/test_pricing.py
 #29        test_pricing.py:9        ← tests.test_pricing.test_bulk_discount returned None
 #30        test_pricing.py:12       → tests.test_pricing.test_guest
 #31        test_pricing.py:13       │ assert Pricer(None, [LineItem("A", -1, 5.0)]).total() == -5.…
-#32        pricing.py:17              → pricing.Pricer.__init__   ⟶ self=<pricing.Pricer>, items=[LineItem(sku='A', quantity=-1, unit_pri…, api_token=[REDACTED]
+#32        pricing.py:17              → pricing.Pricer.__init__   ⟶ self=<pricing.Pricer>, items=[LineItem(sku='A', quantity=-1, unit_pri…, api_token='t0p'
 #33        pricing.py:18              │ self.tier = tier
 #34        pricing.py:19              │ self.items = items   ⟶ self: <pricing.Pricer> → <pricing.Pricer tier=None> (mutated)
 #35        pricing.py:20              │ self.api_token = api_token   ⟶ self: <pricing.Pricer tier=None> → <pricing.Pricer tier=None, ite… (mutated)

@@ -143,5 +143,5 @@ servers) and merged by time; prefer single-process runs for a readable story.
 walkthrough of the diff in execution order with concrete example values, and offer to trace any
 Ruby/Python/Node part of the change.
 
-**Secrets.** Values whose names look secret (password, token, api_key, session, ...) are redacted
+**Secrets.** Values whose names look secret (password, secret, private_key, credential) are redacted
 before they're written. Still don't paste trace contents into external services.

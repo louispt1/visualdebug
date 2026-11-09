@@ -84,6 +84,9 @@ symlinks so the packaged crate contains them).
     tracing overhead dominates them, so they would point at the wrong hotspots.
 18. **`.visualdebug/` ignores itself** with a `.gitignore` of `*` inside it (spec: add it to the project's
     `.gitignore`). Editing the project's `.gitignore` left a change to commit in every repo traced.
+19. **Redaction pattern is `password|secret|private_key|credential`** (spec also lists `passwd`, `token`,
+    `api_key`, `apikey`, `authorization`, `cookie`, `session`). Traces run in test/dev, where those values
+    are rarely useful to an attacker, and the broad pattern hid ordinary values like `session_id`.
 
 ## Ruby probe notes
 

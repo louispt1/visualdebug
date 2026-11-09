@@ -1,6 +1,6 @@
 ---
 source: crates/visualdebug-cli/tests/fixtures.rs
-assertion_line: 99
+assertion_line: 146
 expression: s
 ---
 trace: golden-program  (62 steps, 22 rows shown; exit 0; python)
@@ -11,7 +11,7 @@ command: python shop.py
 #4         shop.py:21               │ def countdown(n):
 #5         shop.py:27               │ def parse(text):
 #6         shop.py:34               │ cart = Cart("ada", session_token="tok-123").add("A", 2, "9.9…
-#7         shop.py:5                  → shop.Cart.__init__   ⟶ self=<__main__.Cart>, owner='ada', session_token=[REDACTED]
+#7         shop.py:5                  → shop.Cart.__init__   ⟶ self=<__main__.Cart>, owner='ada', session_token='tok-123'
 #8         shop.py:6                  │ self.owner = owner
 #9         shop.py:7                  │ self.session_token = session_token   ⟶ self: <__main__.Cart> → <__main__.Cart owner='ada'> (mutated)
 #10        shop.py:8                  │ self.items = []   ⟶ self: <__main__.Cart owner='ada'> → <__main__.Cart owner='ada', se… (mutated)

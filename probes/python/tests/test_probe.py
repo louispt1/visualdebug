@@ -64,7 +64,7 @@ class Both:
         self.assertTrue(any(e["event"] == "raise" and e["exception"]["type"] == "KeyError" for e in ev))
 
     def test_redaction_by_name_and_identity(self):
-        ev, _, _, _ = self.trace("def login(password):\n    pw = password\n    return pw\nx = login('hunter2')\nd = {'api_key': 'kkk', 'n': 1}\nprint(len(d))\n")
+        ev, _, _, _ = self.trace("def login(password):\n    pw = password\n    return pw\nx = login('hunter2')\nd = {'client_secret': 'kkk', 'n': 1}\nprint(len(d))\n")
         dump = json.dumps(ev)
         self.assertNotIn("hunter2", dump)
         self.assertNotIn("kkk", dump)
