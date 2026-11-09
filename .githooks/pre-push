@@ -1,0 +1,12 @@
+#!/bin/sh
+# Mirror CI before pushing to main. Enable once: git config core.hooksPath .githooks
+# Skip in an emergency: git push --no-verify
+grep -q ' refs/heads/main ' || exit 0
+set -e
+export CI=true INSTA_UPDATE=no
+cargo fmt --all --check
+cargo clippy --all-targets -- -D warnings
+cargo test
+ruby probes/ruby/test/probe_test.rb
+python3 -m unittest discover -s probes/python/tests
+node --test probes/node/test/probe.test.cjs
