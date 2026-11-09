@@ -153,15 +153,24 @@
     parts.forEach((part, k) => {
       if (k % 2 === 1) { out.push(`<pre><code>${esc(part.replace(/\n$/, ""))}</code></pre>`); return; }
       for (const block of part.split(/\n\s*\n/)) {
-        const lines = block.split("\n").filter((l) => l.trim());
-        if (!lines.length) continue;
-        if (lines.every((l) => /^\s*([-*]|\d+\.)\s+/.test(l))) {
-          const tag = /^\s*\d+\./.test(lines[0]) ? "ol" : "ul";
-          out.push(`<${tag}>${lines.map((l) => `<li>${inline(l.replace(/^\s*([-*]|\d+\.)\s+/, ""))}</li>`).join("")}</${tag}>`);
-        } else if (/^#{1,4}\s/.test(lines[0])) {
-          out.push(`<h4>${inline(lines[0].replace(/^#+\s*/, ""))}</h4>`);
-          if (lines.length > 1) out.push(`<p>${inline(lines.slice(1).join(" "))}</p>`);
-        } else out.push(`<p>${inline(lines.join(" "))}</p>`);
+        // A list may follow a paragraph line directly; non-bullet lines after a bullet continue it.
+        let para = [], list = null;
+        const flush = () => {
+          if (para.length) out.push(`<p>${inline(para.join(" "))}</p>`);
+          if (list) out.push(`<${list.tag}>${list.items.map((it) => `<li>${inline(it.join(" "))}</li>`).join("")}</${list.tag}>`);
+          para = []; list = null;
+        };
+        for (const l of block.split("\n").filter((l) => l.trim())) {
+          const bullet = l.match(/^\s*([-*]|\d+\.)\s+/);
+          if (/^#{1,4}\s/.test(l)) { flush(); out.push(`<h4>${inline(l.replace(/^#+\s*/, ""))}</h4>`); }
+          else if (bullet) {
+            const tag = /\d/.test(bullet[1]) ? "ol" : "ul";
+            if (list?.tag !== tag) { flush(); list = { tag, items: [] }; }
+            list.items.push([l.slice(bullet[0].length)]);
+          } else if (list) list.items[list.items.length - 1].push(l.trim());
+          else para.push(l);
+        }
+        flush();
       }
     });
     return out.join("");

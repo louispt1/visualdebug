@@ -110,3 +110,23 @@ test("max_events truncates", () => {
   assert.equal(events.length, 5);
   assert.ok(all.some((e) => e.kind === "truncated"));
 });
+
+test("node internals are stepped out of, and each line is recorded once per visit", () => {
+  const { events, r } = trace(`
+function link(href) {
+  const url = new URL(href);
+  url.searchParams.set("ref", new TextEncoder().encode("x").length);
+  return url.toString();
+}
+function count() {
+  let n = 0;
+  for (let i = 0; i < 3; i++) n += i;
+  return n;
+}
+console.log(link("https://a.test/?y=1"), count());
+`);
+  assert.equal(r.stdout, "https://a.test/?y=1&ref=1 3\n");
+  const lines = (fn) => events.filter((e) => e.function === fn && (e.event === "call" || e.event === "line")).map((e) => e.line);
+  assert.deepEqual(lines("link"), [3, 4, 5]);
+  assert.ok(lines("count").filter((l) => l === 9).length >= 3, "a one-line loop still shows each iteration");
+});

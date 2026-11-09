@@ -237,10 +237,11 @@ async function locals(frame) {
 }
 
 // ------------------------------------------------------------------ the window
-// Our frame stack (bottom first): { fid, key, name, lineLevel }. Aligned against the project
+// Our frame stack (bottom first): { fid, key, name, lineLevel, line, seen }. Aligned against the project
 // frames of each pause (V8 call frame ids are not stable across pauses).
 let win = null;
 let fidSeq = 0;
+const posKey = (f) => `${f.location.lineNumber}:${f.location.columnNumber}`;
 const frameKey = (f) => `${f.functionLocation ? f.functionLocation.scriptId + ":" + f.functionLocation.lineNumber + ":" + f.functionLocation.columnNumber : f.location.scriptId}|${f.functionName}`;
 
 function projectFrames(callFrames) {
@@ -266,6 +267,12 @@ async function onPaused(params) {
       return;
     }
     const top = P[P.length - 1];
+    // Node's own JS (node:internal/*) can't be blackboxed: its scripts have no context id, so V8
+    // never applies patterns, ranges or skipLists to them. Step back out instead of through.
+    if (win && top.f !== params.callFrames[0] && params.reason !== "exception" && params.reason !== "promiseRejection") {
+      next = "stepOut";
+      return;
+    }
     if (!win) {
       if (!opensWindow(params, top)) return;
       win = { stack: [] };
@@ -286,7 +293,7 @@ async function onPaused(params) {
     let enteredTop = false;
     for (let i = k; i < rel.length; i++) {
       const { f, o } = rel[i];
-      const fr = { fid: ++fidSeq, key: frameKey(f), name: f.functionName || "(anonymous)", lineLevel: lineLevel(o.file) || win.stack.length === 0 };
+      const fr = { fid: ++fidSeq, key: frameKey(f), name: f.functionName || "(anonymous)", lineLevel: lineLevel(o.file) || win.stack.length === 0, line: o.line, seen: new Set([posKey(f)]) };
       win.stack.push(fr);
       const isTop = i === rel.length - 1;
       const ev = { event: "call", file: o.file, line: o.line, function: fr.name, frame_id: fr.fid, depth: win.stack.length };
@@ -307,15 +314,21 @@ async function onPaused(params) {
         endWindow();
         return;
       }
-    } else if (!enteredTop && fr.lineLevel) {
-      emit({ event: "line", file: o.file, line: o.line, function: fr.name, frame_id: fr.fid, depth: win.stack.length, locals: await locals(f) });
+    } else if (!enteredTop) {
+      // V8 pauses at every call and statement, and again after each call returns: record a line
+      // once per visit, like Ruby/Python. A position seen twice on the same line is a loop going round.
+      const sameVisit = o.line === fr.line && !fr.seen.has(posKey(f));
+      if (!sameVisit) fr.seen = new Set();
+      fr.line = o.line;
+      fr.seen.add(posKey(f));
+      if (fr.lineLevel && !sameVisit) emit({ event: "line", file: o.file, line: o.line, function: fr.name, frame_id: fr.fid, depth: win.stack.length, locals: await locals(f) });
     }
     next = "stepInto";
   } catch (e) {
     logErr("paused", e);
     next = "resume";
   } finally {
-    post(next === "stepInto" ? "Debugger.stepInto" : "Debugger.resume").catch(() => post("Debugger.resume").catch(() => {}));
+    post("Debugger." + next).catch(() => post("Debugger.resume").catch(() => {}));
   }
 }
 

@@ -121,8 +121,18 @@ symlinks so the packaged crate contains them).
 - `--require visualdebug_probe.cjs` starts an inspector worker (`connectToMainThread`) and blocks in
   `Atomics.wait` until it is ready (~25ms). The worker keeps itself alive with a timer: a pending
   inspector call does not, and without it the worker exits mid-handshake (an early "deadlock").
-- Recording: breakpoints only *open* a window; `Debugger.stepInto` drives it, with node internals and
-  `node_modules` blackboxed. Every pause is answered (step or resume) even if recording fails.
+- Recording: breakpoints only *open* a window; `Debugger.stepInto` drives it, with `node_modules`
+  blackboxed. Every pause is answered (step or resume) even if recording fails.
+- Node's own JS (`node:internal/*`: `URL`, `URLSearchParams`, `TextEncoder`, ...) cannot be
+  blackboxed: those scripts have execution context id 0, and blackbox patterns, `setBlackboxedRanges`
+  and `stepInto`'s `skipList` all have no effect on them (Node 20 and 25). A step that lands there is
+  answered with `Debugger.stepOut`, recording nothing. Stepping through instead cost ~100 pauses per
+  `new URL()` (47s vs 2.5s for 1000 of them). Ceiling: a project callback called synchronously from
+  node internals (`EventEmitter` listeners, stream handlers) is missed unless its file is line-level
+  without `--start-at` (those lines have breakpoints).
+- One line event per visit to a line, as Ruby/Python: V8 pauses at every call and statement on a line,
+  and again after each call returns. A position seen twice on the same line starts a new visit (a
+  one-line loop going round); column order is not used, since nested calls pause out of order.
 - Frame identity: V8 call frame ids change between pauses, so the project-frame stack is aligned
   between pauses by function location + name; a `returnValue` pause pops the frame.
 - Breakpoint placement: untransformed files get `setBreakpointByUrl` (exact, resolved at compile time).
